@@ -1,0 +1,556 @@
+{
+    "tables": {
+        "chat_messages": {
+            "columns": [
+                {
+                    "name": "id",
+                    "type": "INTEGER",
+                    "primary_key": true,
+                    "nullable": false
+                },
+                {
+                    "name": "session_id",
+                    "type": "INTEGER",
+                    "primary_key": false,
+                    "nullable": false
+                },
+                {
+                    "name": "role",
+                    "type": "VARCHAR(20) COLLATE \"utf8mb4_unicode_ci\"",
+                    "primary_key": false,
+                    "nullable": false
+                },
+                {
+                    "name": "content",
+                    "type": "TEXT COLLATE \"utf8mb4_unicode_ci\"",
+                    "primary_key": false,
+                    "nullable": false
+                },
+                {
+                    "name": "created_at",
+                    "type": "DATETIME",
+                    "primary_key": false,
+                    "nullable": true
+                }
+            ],
+            "sample_data": []
+        },
+        "chat_sessions": {
+            "columns": [
+                {
+                    "name": "id",
+                    "type": "INTEGER",
+                    "primary_key": true,
+                    "nullable": false
+                },
+                {
+                    "name": "user_id",
+                    "type": "INTEGER",
+                    "primary_key": false,
+                    "nullable": false
+                },
+                {
+                    "name": "title",
+                    "type": "VARCHAR(255) COLLATE \"utf8mb4_unicode_ci\"",
+                    "primary_key": false,
+                    "nullable": true
+                },
+                {
+                    "name": "created_at",
+                    "type": "DATETIME",
+                    "primary_key": false,
+                    "nullable": true
+                },
+                {
+                    "name": "updated_at",
+                    "type": "DATETIME",
+                    "primary_key": false,
+                    "nullable": true
+                }
+            ],
+            "sample_data": []
+        },
+        "users": {
+            "columns": [
+                {
+                    "name": "id",
+                    "type": "INTEGER",
+                    "primary_key": true,
+                    "nullable": false
+                },
+                {
+                    "name": "email",
+                    "type": "VARCHAR(255) COLLATE \"utf8mb4_unicode_ci\"",
+                    "primary_key": false,
+                    "nullable": false
+                },
+                {
+                    "name": "password_hash",
+                    "type": "VARCHAR(255) COLLATE \"utf8mb4_unicode_ci\"",
+                    "primary_key": false,
+                    "nullable": false
+                },
+                {
+                    "name": "full_name",
+                    "type": "VARCHAR(100) COLLATE \"utf8mb4_unicode_ci\"",
+                    "primary_key": false,
+                    "nullable": false
+                },
+                {
+                    "name": "avatar_url",
+                    "type": "VARCHAR(500) COLLATE \"utf8mb4_unicode_ci\"",
+                    "primary_key": false,
+                    "nullable": true
+                },
+                {
+                    "name": "phone",
+                    "type": "VARCHAR(20) COLLATE \"utf8mb4_unicode_ci\"",
+                    "primary_key": false,
+                    "nullable": true
+                },
+                {
+                    "name": "role",
+                    "type": "VARCHAR(20) COLLATE \"utf8mb4_unicode_ci\"",
+                    "primary_key": false,
+                    "nullable": true
+                },
+                {
+                    "name": "is_active",
+                    "type": "TINYINT",
+                    "primary_key": false,
+                    "nullable": true
+                },
+                {
+                    "name": "created_at",
+                    "type": "DATETIME",
+                    "primary_key": false,
+                    "nullable": true
+                },
+                {
+                    "name": "updated_at",
+                    "type": "DATETIME",
+                    "primary_key": false,
+                    "nullable": true
+                }
+            ],
+            "sample_data": [
+                "Error fetching data: Could not locate column in row for column 'keys'"
+            ]
+        },
+        "checkins": {
+            "columns": [
+                {
+                    "name": "id",
+                    "type": "INTEGER",
+                    "primary_key": true,
+                    "nullable": false
+                },
+                {
+                    "name": "user_id",
+                    "type": "INTEGER",
+                    "primary_key": false,
+                    "nullable": false
+                },
+                {
+                    "name": "location_id",
+                    "type": "INTEGER",
+                    "primary_key": false,
+                    "nullable": false
+                },
+                {
+                    "name": "photos",
+                    "type": "JSON",
+                    "primary_key": false,
+                    "nullable": true
+                },
+                {
+                    "name": "comment",
+                    "type": "TEXT COLLATE \"utf8mb4_unicode_ci\"",
+                    "primary_key": false,
+                    "nullable": true
+                },
+                {
+                    "name": "check_in_date",
+                    "type": "DATETIME",
+                    "primary_key": false,
+                    "nullable": true
+                },
+                {
+                    "name": "created_at",
+                    "type": "DATETIME",
+                    "primary_key": false,
+                    "nullable": true
+                }
+            ],
+            "sample_data": [
+                "Error fetching data: Could not locate column in row for column 'keys'"
+            ]
+        },
+        "locations": {
+            "columns": [
+                {
+                    "name": "id",
+                    "type": "INTEGER",
+                    "primary_key": true,
+                    "nullable": false
+                },
+                {
+                    "name": "name",
+                    "type": "VARCHAR(255) COLLATE \"utf8mb4_unicode_ci\"",
+                    "primary_key": false,
+                    "nullable": false
+                },
+                {
+                    "name": "description",
+                    "type": "TEXT COLLATE \"utf8mb4_unicode_ci\"",
+                    "primary_key": false,
+                    "nullable": true
+                },
+                {
+                    "name": "category",
+                    "type": "VARCHAR(50) COLLATE \"utf8mb4_unicode_ci\"",
+                    "primary_key": false,
+                    "nullable": false
+                },
+                {
+                    "name": "address",
+                    "type": "VARCHAR(500) COLLATE \"utf8mb4_unicode_ci\"",
+                    "primary_key": false,
+                    "nullable": true
+                },
+                {
+                    "name": "city",
+                    "type": "VARCHAR(100) COLLATE \"utf8mb4_unicode_ci\"",
+                    "primary_key": false,
+                    "nullable": false
+                },
+                {
+                    "name": "country",
+                    "type": "VARCHAR(100) COLLATE \"utf8mb4_unicode_ci\"",
+                    "primary_key": false,
+                    "nullable": true
+                },
+                {
+                    "name": "latitude",
+                    "type": "FLOAT",
+                    "primary_key": false,
+                    "nullable": true
+                },
+                {
+                    "name": "longitude",
+                    "type": "FLOAT",
+                    "primary_key": false,
+                    "nullable": true
+                },
+                {
+                    "name": "rating_avg",
+                    "type": "FLOAT",
+                    "primary_key": false,
+                    "nullable": true
+                },
+                {
+                    "name": "total_reviews",
+                    "type": "INTEGER",
+                    "primary_key": false,
+                    "nullable": true
+                },
+                {
+                    "name": "images",
+                    "type": "JSON",
+                    "primary_key": false,
+                    "nullable": true
+                },
+                {
+                    "name": "description_embedding",
+                    "type": "JSON",
+                    "primary_key": false,
+                    "nullable": true
+                },
+                {
+                    "name": "created_by",
+                    "type": "INTEGER",
+                    "primary_key": false,
+                    "nullable": true
+                },
+                {
+                    "name": "created_at",
+                    "type": "DATETIME",
+                    "primary_key": false,
+                    "nullable": true
+                },
+                {
+                    "name": "updated_at",
+                    "type": "DATETIME",
+                    "primary_key": false,
+                    "nullable": true
+                }
+            ],
+            "sample_data": [
+                "Error fetching data: Could not locate column in row for column 'keys'"
+            ]
+        },
+        "favorites": {
+            "columns": [
+                {
+                    "name": "id",
+                    "type": "INTEGER",
+                    "primary_key": true,
+                    "nullable": false
+                },
+                {
+                    "name": "user_id",
+                    "type": "INTEGER",
+                    "primary_key": false,
+                    "nullable": false
+                },
+                {
+                    "name": "location_id",
+                    "type": "INTEGER",
+                    "primary_key": false,
+                    "nullable": false
+                },
+                {
+                    "name": "created_at",
+                    "type": "DATETIME",
+                    "primary_key": false,
+                    "nullable": true
+                }
+            ],
+            "sample_data": []
+        },
+        "itineraries": {
+            "columns": [
+                {
+                    "name": "id",
+                    "type": "INTEGER",
+                    "primary_key": true,
+                    "nullable": false
+                },
+                {
+                    "name": "user_id",
+                    "type": "INTEGER",
+                    "primary_key": false,
+                    "nullable": false
+                },
+                {
+                    "name": "title",
+                    "type": "VARCHAR(255) COLLATE \"utf8mb4_unicode_ci\"",
+                    "primary_key": false,
+                    "nullable": false
+                },
+                {
+                    "name": "description",
+                    "type": "TEXT COLLATE \"utf8mb4_unicode_ci\"",
+                    "primary_key": false,
+                    "nullable": true
+                },
+                {
+                    "name": "start_date",
+                    "type": "DATETIME",
+                    "primary_key": false,
+                    "nullable": true
+                },
+                {
+                    "name": "end_date",
+                    "type": "DATETIME",
+                    "primary_key": false,
+                    "nullable": true
+                },
+                {
+                    "name": "locations",
+                    "type": "JSON",
+                    "primary_key": false,
+                    "nullable": true
+                },
+                {
+                    "name": "status",
+                    "type": "VARCHAR(20) COLLATE \"utf8mb4_unicode_ci\"",
+                    "primary_key": false,
+                    "nullable": true
+                },
+                {
+                    "name": "created_at",
+                    "type": "DATETIME",
+                    "primary_key": false,
+                    "nullable": true
+                },
+                {
+                    "name": "updated_at",
+                    "type": "DATETIME",
+                    "primary_key": false,
+                    "nullable": true
+                }
+            ],
+            "sample_data": [
+                "Error fetching data: Could not locate column in row for column 'keys'"
+            ]
+        },
+        "itinerary_activities": {
+            "columns": [
+                {
+                    "name": "id",
+                    "type": "INTEGER",
+                    "primary_key": true,
+                    "nullable": false
+                },
+                {
+                    "name": "day_id",
+                    "type": "INTEGER",
+                    "primary_key": false,
+                    "nullable": false
+                },
+                {
+                    "name": "location_id",
+                    "type": "INTEGER",
+                    "primary_key": false,
+                    "nullable": true
+                },
+                {
+                    "name": "title",
+                    "type": "VARCHAR(255) COLLATE \"utf8mb4_unicode_ci\"",
+                    "primary_key": false,
+                    "nullable": false
+                },
+                {
+                    "name": "description",
+                    "type": "TEXT COLLATE \"utf8mb4_unicode_ci\"",
+                    "primary_key": false,
+                    "nullable": true
+                },
+                {
+                    "name": "start_time",
+                    "type": "TIME",
+                    "primary_key": false,
+                    "nullable": true
+                },
+                {
+                    "name": "end_time",
+                    "type": "TIME",
+                    "primary_key": false,
+                    "nullable": true
+                },
+                {
+                    "name": "cost_estimate",
+                    "type": "FLOAT",
+                    "primary_key": false,
+                    "nullable": true
+                },
+                {
+                    "name": "note",
+                    "type": "TEXT COLLATE \"utf8mb4_unicode_ci\"",
+                    "primary_key": false,
+                    "nullable": true
+                },
+                {
+                    "name": "order_index",
+                    "type": "INTEGER",
+                    "primary_key": false,
+                    "nullable": true
+                },
+                {
+                    "name": "created_at",
+                    "type": "DATETIME",
+                    "primary_key": false,
+                    "nullable": true
+                }
+            ],
+            "sample_data": []
+        },
+        "itinerary_days": {
+            "columns": [
+                {
+                    "name": "id",
+                    "type": "INTEGER",
+                    "primary_key": true,
+                    "nullable": false
+                },
+                {
+                    "name": "itinerary_id",
+                    "type": "INTEGER",
+                    "primary_key": false,
+                    "nullable": false
+                },
+                {
+                    "name": "day_number",
+                    "type": "INTEGER",
+                    "primary_key": false,
+                    "nullable": false
+                },
+                {
+                    "name": "date",
+                    "type": "DATE",
+                    "primary_key": false,
+                    "nullable": true
+                },
+                {
+                    "name": "title",
+                    "type": "VARCHAR(255) COLLATE \"utf8mb4_unicode_ci\"",
+                    "primary_key": false,
+                    "nullable": true
+                },
+                {
+                    "name": "description",
+                    "type": "TEXT COLLATE \"utf8mb4_unicode_ci\"",
+                    "primary_key": false,
+                    "nullable": true
+                },
+                {
+                    "name": "created_at",
+                    "type": "DATETIME",
+                    "primary_key": false,
+                    "nullable": true
+                }
+            ],
+            "sample_data": []
+        },
+        "reviews": {
+            "columns": [
+                {
+                    "name": "id",
+                    "type": "INTEGER",
+                    "primary_key": true,
+                    "nullable": false
+                },
+                {
+                    "name": "user_id",
+                    "type": "INTEGER",
+                    "primary_key": false,
+                    "nullable": false
+                },
+                {
+                    "name": "location_id",
+                    "type": "INTEGER",
+                    "primary_key": false,
+                    "nullable": false
+                },
+                {
+                    "name": "rating",
+                    "type": "FLOAT",
+                    "primary_key": false,
+                    "nullable": false
+                },
+                {
+                    "name": "comment",
+                    "type": "TEXT COLLATE \"utf8mb4_unicode_ci\"",
+                    "primary_key": false,
+                    "nullable": true
+                },
+                {
+                    "name": "created_at",
+                    "type": "DATETIME",
+                    "primary_key": false,
+                    "nullable": true
+                },
+                {
+                    "name": "updated_at",
+                    "type": "DATETIME",
+                    "primary_key": false,
+                    "nullable": true
+                }
+            ],
+            "sample_data": [
+                "Error fetching data: Could not locate column in row for column 'keys'"
+            ]
+        }
+    }
+}

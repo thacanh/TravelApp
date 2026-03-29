@@ -1,0 +1,104 @@
+﻿Launching lib\main.dart on SM A546E in debug mode...
+Running Gradle task 'assembleDebug'...                          
+flutter : lib/screens/home/h
+ome_screen.dart:416:12: 
+Error: The method 
+'LocationListScreen' isn't 
+defined for the type 
+'ExploreScreen'.
+At line:1 char:1
++ flutter run 2>&1 | 
+Out-File -FilePath 
+compile_errors.txt 
+-Encoding UT ...
++ ~~~~~~~~~~~~~~~~
+    + CategoryInfo          
+    : NotSpecified: (lib/s  
+  creens/hom...ExploreScr   
+ een'.:String) [], Remot    
+eException
+    + FullyQualifiedErrorId 
+    : NativeCommandError
+ 
+ - 'ExploreScreen' is from '
+package:trawime/screens/home
+/home_screen.dart' ('lib/scr
+eens/home/home_screen.dart')
+.
+Try correcting the name to 
+the name of an existing 
+method, or defining a 
+method named 
+'LocationListScreen'.
+    return 
+LocationListScreen();
+           
+^^^^^^^^^^^^^^^^^^
+lib/screens/home/home_screen
+.dart:425:12: Error: The 
+method 'ChatbotScreen' 
+isn't defined for the type 
+'ChatbotScreenSimple'.
+ - 'ChatbotScreenSimple' is 
+from 'package:trawime/screen
+s/home/home_screen.dart' ('l
+ib/screens/home/home_screen.
+dart').
+Try correcting the name to 
+the name of an existing 
+method, or defining a 
+method named 
+'ChatbotScreen'.
+    return ChatbotScreen();
+           ^^^^^^^^^^^^^
+lib/screens/home/home_screen
+.dart:434:12: Error: The 
+method 'ProfileScreen' 
+isn't defined for the type 
+'ProfileScreenSimple'.
+ - 'ProfileScreenSimple' is 
+from 'package:trawime/screen
+s/home/home_screen.dart' ('l
+ib/screens/home/home_screen.
+dart').
+Try correcting the name to 
+the name of an existing 
+method, or defining a 
+method named 
+'ProfileScreen'.
+    return ProfileScreen();
+           ^^^^^^^^^^^^^
+Target 
+kernel_snapshot_program 
+failed: Exception
+
+
+FAILURE: Build failed with 
+an exception.
+
+* What went wrong:
+Execution failed for task ':
+app:compileFlutterBuildDebug
+'.
+> Process 'command 'C:\Users
+\thaca\flutter\bin\flutter.b
+at'' finished with non-zero 
+exit value 1
+
+* Try:
+> Run with --stacktrace 
+option to get the stack 
+trace.
+> Run with --info or 
+--debug option to get more 
+log output.
+> Run with --scan to get 
+full insights.
+> Get more help at 
+https://help.gradle.org.
+
+BUILD FAILED in 6s
+Running Gradle task 'assembleDebug'...                              6.5s
+Error: Gradle task 
+assembleDebug failed with 
+exit code 1
