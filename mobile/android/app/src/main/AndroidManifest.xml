@@ -1,11 +1,16 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Permissions required for Maps & Location -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+
     <application
         android:label="trawime"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
-        <meta-data
-            android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyAeL1u1vsE8MzDseh9JeGdEJFAEkN5VWSk"/>
+        android:icon="@mipmap/ic_launcher"
+        android:hardwareAccelerated="true">
+        <!-- Google Maps API key removed — using OpenStreetMap via flutter_map (no key needed) -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -33,9 +38,7 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
-        <meta-data
-            android:name="io.flutter.embedding.android.EnableImpeller"
-            android:value="false" />
+        <!-- Impeller is now default in Flutter 3.x — removed opt-out -->
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

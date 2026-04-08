@@ -19,6 +19,7 @@ dependencies:
   shimmer: ^3.0.0
   smooth_page_indicator: ^1.1.0
   flutter_rating_bar: ^4.0.1
+  lucide_icons: ^0.257.0
   
   # State Management
   provider: ^6.1.1
@@ -32,10 +33,11 @@ dependencies:
   flutter_secure_storage: ^9.0.0
   
   # Maps & Location
-  google_maps_flutter: ^2.5.3
+  flutter_map: ^6.1.0
+  latlong2: ^0.9.0
   geolocator: ^10.1.0
-  geocoding: ^2.1.1
   
+
   # Image Handling
   image_picker: ^1.0.7
   carousel_slider: ^5.0.0

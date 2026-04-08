@@ -58,7 +58,7 @@ class _LocationDetailScreenState extends State<LocationDetailScreen> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
         );
-        _loadReviews();
+        _loadReviews(); // Reload reviews list
       }
     } catch (e) {
       if (mounted) {
@@ -202,7 +202,7 @@ class _LocationDetailScreenState extends State<LocationDetailScreen> {
                         ],
                       ),
                           const Spacer(),
-                          Container(
+                        Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                             decoration: BoxDecoration(
                               color: const Color(0xFFFFF8E1),
@@ -214,12 +214,21 @@ class _LocationDetailScreenState extends State<LocationDetailScreen> {
                                 const Icon(Icons.star_rounded, color: Colors.amber, size: 18),
                                 const SizedBox(width: 4),
                                 Text(
-                                  location.ratingAvg.toStringAsFixed(1),
+                                  // After reviews load, show live count from _reviews
+                                  _isLoadingReviews
+                                      ? location.ratingDisplay
+                                      : _reviews.isEmpty
+                                          ? 'Chưa có'
+                                          : (_reviews
+                                              .map((r) => (r['rating'] as num).toDouble())
+                                              .reduce((a, b) => a + b) /
+                                              _reviews.length)
+                                              .toStringAsFixed(1),
                                   style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700),
                                 ),
                                 const SizedBox(width: 3),
                                 Text(
-                                  '(${location.totalReviews})',
+                                  '(${_reviews.length})',
                                   style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                                 ),
                               ],

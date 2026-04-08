@@ -11,8 +11,8 @@ class Location {
   final String country;
   final double? latitude;
   final double? longitude;
-  final double ratingAvg;
-  final int totalReviews;
+  final double ratingAvg;     // Computed from reviews table (returned by API)
+  final int totalReviews;     // Computed from reviews table (returned by API)
   final List<String> images;
   final DateTime createdAt;
 
@@ -27,8 +27,8 @@ class Location {
     required this.country,
     this.latitude,
     this.longitude,
-    required this.ratingAvg,
-    required this.totalReviews,
+    this.ratingAvg = 0.0,
+    this.totalReviews = 0,
     required this.images,
     required this.createdAt,
   });
@@ -39,16 +39,16 @@ class Location {
       name: json['name'],
       description: json['description'],
       category: json['category'],
-      categories: json['categories'] != null 
+      categories: json['categories'] != null
           ? (json['categories'] as List).map((c) => Category.fromJson(c)).toList()
           : [],
       address: json['address'],
       city: json['city'],
-      country: json['country'],
+      country: json['country'] ?? 'Vietnam',
       latitude: json['latitude']?.toDouble(),
       longitude: json['longitude']?.toDouble(),
-      ratingAvg: (json['rating_avg'] ?? 0).toDouble(),
-      totalReviews: json['total_reviews'] ?? 0,
+      ratingAvg: (json['rating_avg'] as num? ?? 0).toDouble(),
+      totalReviews: (json['total_reviews'] as num? ?? 0).toInt(),
       images: List<String>.from(json['images'] ?? []),
       createdAt: DateTime.parse(json['created_at']),
     );
@@ -72,21 +72,20 @@ class Location {
       'created_at': createdAt.toIso8601String(),
     };
   }
-  
+
+  /// Returns human-readable category label.
   String get categoryDisplay {
     switch (category) {
-      case 'beach':
-        return 'Bãi biển';
-      case 'mountain':
-        return 'Núi';
-      case 'city':
-        return 'Thành phố';
-      case 'cultural':
-        return 'Văn hóa';
-      case 'nature':
-        return 'Thiên nhiên';
-      default:
-        return category;
+      case 'beach':     return 'Bãi biển';
+      case 'mountain':  return 'Núi';
+      case 'city':      return 'Thành phố';
+      case 'cultural':  return 'Văn hóa';
+      case 'nature':    return 'Thiên nhiên';
+      default:          return category;
     }
   }
+
+  /// Formatted rating string, e.g. "4.5" or "Chưa có".
+  String get ratingDisplay =>
+      totalReviews > 0 ? ratingAvg.toStringAsFixed(1) : 'Chưa có';
 }

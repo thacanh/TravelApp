@@ -147,7 +147,7 @@ class _HomeContentState extends State<HomeContent> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'Xin chào, ${auth.currentUser?.fullName ?? 'Guest'} 👋',
+                                      'Xin chào, ${auth.currentUser?.fullName ?? 'Guest'}',
                                       style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white),
                                     ),
                                     const SizedBox(height: 4),
@@ -439,6 +439,7 @@ class _FeaturedLocationCard extends StatelessWidget {
                         const SizedBox(width: 3),
                         Text(location.city, style: const TextStyle(color: Colors.white70, fontSize: 12)),
                         const Spacer(),
+                        if (location.totalReviews > 0)
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
@@ -451,7 +452,7 @@ class _FeaturedLocationCard extends StatelessWidget {
                               const Icon(Icons.star_rounded, color: Colors.amber, size: 14),
                               const SizedBox(width: 3),
                               Text(
-                                location.ratingAvg.toStringAsFixed(1),
+                                location.ratingDisplay,
                                 style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
                               ),
                             ],

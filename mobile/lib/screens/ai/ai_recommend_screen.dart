@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import '../../config/theme.dart';
 import '../../config/routes.dart';
 import '../../services/api_service.dart';
@@ -172,23 +173,23 @@ class _AIRecommendScreenState extends State<AIRecommendScreen> {
                     scrollDirection: Axis.horizontal,
                     child: Row(
                       children: [
-                        _QuickChip(label: '🏖 Biển đẹp', onTap: () {
+                        _QuickChip(icon: LucideIcons.waves, label: 'Bãi biển', onTap: () {
                           _inputController.text = 'Tôi muốn nghỉ dưỡng ở biển, nơi yên tĩnh, có bãi biển đẹp';
                           _getRecommendations();
                         }),
-                        _QuickChip(label: '⛰ Leo núi', onTap: () {
+                        _QuickChip(icon: LucideIcons.mountain, label: 'Leo núi', onTap: () {
                           _inputController.text = 'Tôi muốn leo núi, trekking, khám phá thiên nhiên hoang sơ';
                           _getRecommendations();
                         }),
-                        _QuickChip(label: '🏛 Văn hóa', onTap: () {
+                        _QuickChip(icon: LucideIcons.landmark, label: 'Văn hóa', onTap: () {
                           _inputController.text = 'Tôi muốn tham quan di tích lịch sử, đền chùa, văn hóa';
                           _getRecommendations();
                         }),
-                        _QuickChip(label: '🌿 Thiên nhiên', onTap: () {
+                        _QuickChip(icon: LucideIcons.leaf, label: 'Thiên nhiên', onTap: () {
                           _inputController.text = 'Tôi muốn khám phá thiên nhiên hoang sơ, hang động, rừng';
                           _getRecommendations();
                         }),
-                        _QuickChip(label: '🏙 Thành phố', onTap: () {
+                        _QuickChip(icon: LucideIcons.building2, label: 'Thành phố', onTap: () {
                           _inputController.text = 'Tôi muốn du lịch thành phố, ẩm thực, mua sắm, giải trí';
                           _getRecommendations();
                         }),
@@ -333,15 +334,17 @@ class _AIRecommendScreenState extends State<AIRecommendScreen> {
 }
 
 class _QuickChip extends StatelessWidget {
+  final IconData icon;
   final String label;
   final VoidCallback onTap;
-  const _QuickChip({required this.label, required this.onTap});
+  const _QuickChip({required this.icon, required this.label, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: ActionChip(
+        avatar: Icon(icon, size: 15, color: const Color(0xFF6C63FF)),
         label: Text(label, style: const TextStyle(fontSize: 12.5)),
         onPressed: onTap,
         backgroundColor: Colors.grey[50],
@@ -361,12 +364,12 @@ class _ResultCard extends StatelessWidget {
 
   IconData _categoryIcon(String? cat) {
     switch (cat) {
-      case 'beach': return Icons.beach_access;
-      case 'mountain': return Icons.terrain;
-      case 'city': return Icons.location_city;
-      case 'cultural': return Icons.account_balance;
-      case 'nature': return Icons.nature;
-      default: return Icons.place;
+      case 'beach': return LucideIcons.waves;
+      case 'mountain': return LucideIcons.mountain;
+      case 'city': return LucideIcons.building2;
+      case 'cultural': return LucideIcons.landmark;
+      case 'nature': return LucideIcons.leaf;
+      default: return LucideIcons.mapPin;
     }
   }
 

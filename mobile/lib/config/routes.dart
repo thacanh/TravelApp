@@ -7,6 +7,7 @@ import '../screens/locations/location_detail_screen.dart';
 import '../screens/checkin/checkin_screen.dart';
 import '../screens/itinerary/itinerary_list_screen.dart';
 import '../screens/itinerary/itinerary_detail_screen.dart';
+import '../screens/itinerary/itinerary_route_map_screen.dart';
 import '../screens/ai/ai_recommend_screen.dart';
 import '../screens/ai/chatbot_screen.dart';
 import '../screens/map/map_screen.dart';
@@ -15,6 +16,8 @@ import '../screens/profile/edit_profile_screen.dart';
 import '../screens/admin/admin_dashboard_screen.dart';
 import '../screens/admin/admin_users_screen.dart';
 import '../screens/admin/admin_reviews_screen.dart';
+import '../screens/admin/admin_locations_screen.dart';
+import '../screens/admin/admin_location_form_screen.dart';
 
 class AppRoutes {
   static const String login = '/login';
@@ -25,6 +28,7 @@ class AppRoutes {
   static const String checkin = '/checkin';
   static const String itineraryList = '/itineraries';
   static const String itineraryDetail = '/itinerary-detail';
+  static const String itineraryRouteMap = '/itinerary-route-map';
   static const String aiRecommend = '/ai-recommend';
   static const String chatbot = '/chatbot';
   static const String map = '/map';
@@ -34,7 +38,9 @@ class AppRoutes {
   static const String adminDashboard = '/admin/dashboard';
   static const String adminUsers = '/admin/users';
   static const String adminReviews = '/admin/reviews';
-  
+  static const String adminLocations = '/admin/locations';
+  static const String adminLocationForm = '/admin/location-form';
+
   static Map<String, WidgetBuilder> getRoutes() {
     return {
       login: (context) => const LoginScreen(),
@@ -45,6 +51,7 @@ class AppRoutes {
       checkin: (context) => const CheckinScreen(),
       itineraryList: (context) => const ItineraryListScreen(),
       itineraryDetail: (context) => const ItineraryDetailScreen(),
+      itineraryRouteMap: (context) => const ItineraryRouteMapScreen(),
       aiRecommend: (context) => const AIRecommendScreen(),
       chatbot: (context) => const ChatbotScreen(),
       map: (context) => const MapScreen(),
@@ -54,6 +61,8 @@ class AppRoutes {
       adminDashboard: (context) => const AdminDashboardScreen(),
       adminUsers: (context) => const AdminUsersScreen(),
       adminReviews: (context) => const AdminReviewsScreen(),
+      adminLocations: (context) => const AdminLocationsScreen(),
+      adminLocationForm: (context) => const AdminLocationFormScreen(),
     };
   }
 }

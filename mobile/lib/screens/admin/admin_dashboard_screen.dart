@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import '../../config/theme.dart';
 import '../../services/api_service.dart';
 
@@ -78,28 +79,28 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       childAspectRatio: 1.35,
       children: [
         _StatCard(
-          icon: Icons.people,
+          icon: LucideIcons.users,
           label: 'Người dùng',
           value: '${users['total'] ?? 0}',
           subtitle: '${users['active'] ?? 0} hoạt động',
           color: AppTheme.primaryColor,
         ),
         _StatCard(
-          icon: Icons.location_on,
+          icon: LucideIcons.mapPin,
           label: 'Địa điểm',
           value: '${locations['total'] ?? 0}',
           subtitle: '',
           color: AppTheme.secondaryColor,
         ),
         _StatCard(
-          icon: Icons.rate_review,
+          icon: LucideIcons.star,
           label: 'Đánh giá',
           value: '${reviews['total'] ?? 0}',
           subtitle: '⭐ ${reviews['average_rating'] ?? 0}',
           color: AppTheme.accentColor,
         ),
         _StatCard(
-          icon: Icons.check_circle,
+          icon: LucideIcons.checkCircle,
           label: 'Check-in',
           value: '${checkins['total'] ?? 0}',
           subtitle: '',
@@ -122,27 +123,27 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           child: Column(
             children: [
               ListTile(
-                leading: const Icon(Icons.people_outline, color: AppTheme.primaryColor),
+                leading: const Icon(LucideIcons.users, color: AppTheme.primaryColor, size: 22),
                 title: const Text('Quản lý người dùng'),
                 subtitle: const Text('Xem, khóa/mở khóa tài khoản'),
-                trailing: const Icon(Icons.chevron_right),
+                trailing: const Icon(LucideIcons.chevronRight, size: 18),
                 onTap: () => Navigator.pushNamed(context, '/admin/users'),
               ),
               const Divider(height: 1),
               ListTile(
-                leading: const Icon(Icons.rate_review_outlined, color: AppTheme.secondaryColor),
+                leading: const Icon(LucideIcons.messageSquare, color: AppTheme.secondaryColor, size: 22),
                 title: const Text('Kiểm duyệt đánh giá'),
                 subtitle: const Text('Duyệt và xóa đánh giá vi phạm'),
-                trailing: const Icon(Icons.chevron_right),
+                trailing: const Icon(LucideIcons.chevronRight, size: 18),
                 onTap: () => Navigator.pushNamed(context, '/admin/reviews'),
               ),
               const Divider(height: 1),
               ListTile(
-                leading: const Icon(Icons.add_location_alt, color: AppTheme.successColor),
+                leading: const Icon(LucideIcons.mapPin, color: AppTheme.successColor, size: 22),
                 title: const Text('Quản lý địa điểm'),
                 subtitle: const Text('Thêm, sửa, xóa địa điểm'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.pushNamed(context, '/locations'),
+                trailing: const Icon(LucideIcons.chevronRight, size: 18),
+                onTap: () => Navigator.pushNamed(context, '/admin/locations'),
               ),
             ],
           ),

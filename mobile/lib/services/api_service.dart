@@ -102,6 +102,19 @@ class ApiService {
       'radius_km': radius,
     });
   }
+
+  // Admin Location CRUD
+  Future<Response> createLocation(Map<String, dynamic> data) async {
+    return await _dio.post('/api/locations', data: data);
+  }
+
+  Future<Response> updateLocation(int id, Map<String, dynamic> data) async {
+    return await _dio.put('/api/locations/$id', data: data);
+  }
+
+  Future<Response> deleteLocation(int id) async {
+    return await _dio.delete('/api/locations/$id');
+  }
   
   // Check-in APIs
   Future<Response> createCheckin(Map<String, dynamic> data) async {
@@ -251,5 +264,13 @@ class ApiService {
 
   Future<Response> deleteAdminReview(int reviewId) async {
     return await _dio.delete('/api/admin/reviews/$reviewId');
+  }
+
+  // Itinerary Route Planning
+  Future<Response> getItineraryDayRoute(int itineraryId, int dayId, double lat, double lng) async {
+    return await _dio.get(
+      '/api/itineraries/$itineraryId/days/$dayId/route',
+      queryParameters: {'user_lat': lat, 'user_lng': lng},
+    );
   }
 }

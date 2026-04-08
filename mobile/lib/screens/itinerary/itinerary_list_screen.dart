@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import '../../config/theme.dart';
 import '../../config/routes.dart';
 import '../../services/api_service.dart';
@@ -69,7 +70,7 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
                       title: Text(startDate != null
                           ? 'Bắt đầu: ${startDate!.day}/${startDate!.month}/${startDate!.year}'
                           : 'Chọn ngày bắt đầu'),
-                      trailing: const Icon(Icons.calendar_today),
+                      trailing: const Icon(LucideIcons.calendar, size: 18),
                       onTap: () async {
                         final date = await showDatePicker(
                           context: ctx,
@@ -85,7 +86,7 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
                       title: Text(endDate != null
                           ? 'Kết thúc: ${endDate!.day}/${endDate!.month}/${endDate!.year}'
                           : 'Chọn ngày kết thúc'),
-                      trailing: const Icon(Icons.calendar_today),
+                      trailing: const Icon(LucideIcons.calendar, size: 18),
                       onTap: () async {
                         final date = await showDatePicker(
                           context: ctx,
@@ -156,7 +157,7 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: _showCreateDialog,
         backgroundColor: AppTheme.primaryColor,
-        child: const Icon(Icons.add, color: Colors.white),
+        child: const Icon(LucideIcons.plus, color: Colors.white),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -295,14 +296,14 @@ class _ItineraryCard extends StatelessWidget {
               const SizedBox(height: 8),
               Row(
                 children: [
-                  Icon(Icons.calendar_today, size: 14, color: Colors.grey[500]),
+                  Icon(LucideIcons.calendar, size: 14, color: Colors.grey[500]),
                   const SizedBox(width: 4),
                   Text(
                     _formatDates(itinerary['start_date'], itinerary['end_date']),
                     style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                   ),
                   const Spacer(),
-                  Icon(Icons.calendar_view_week, size: 14, color: Colors.grey[500]),
+                  Icon(LucideIcons.calendarDays, size: 14, color: Colors.grey[500]),
                   const SizedBox(width: 4),
                   Text('${days.length} ngày', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
                 ],

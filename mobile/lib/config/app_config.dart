@@ -1,7 +1,7 @@
 class AppConfig {
   // API Configuration
-  static const String baseUrl = "http://192.168.100.222:8000"; // Local network
-  // static const String baseUrl = "http://10.0.2.2:8000"; // Android emulator
+  // static const String baseUrl = "http://10.0.2.2:8000";
+  static const String baseUrl = "http://192.168.100.222:8000";
   // static const String baseUrl = "https://api.trawime.com"; // Production
   
   static const String apiVersion = "v1";
@@ -17,11 +17,11 @@ class AppConfig {
   static const int maxImageSize = 5 * 1024 * 1024; // 5MB
   static const List<String> allowedImageExtensions = ['jpg', 'jpeg', 'png', 'webp'];
   
-  // Map Configuration (Replace with your own API key)
-  static const String googleMapsApiKey = "AIzaSyAeL1u1vsE8MzDseh9JeGdEJFAEkN5VWSk";
+  // Map Configuration — dùng OpenStreetMap (không cần API key)
+  // static const String googleMapsApiKey = "AIzaSyAeL1u1vsE8MzDseh9JeGdEJFAEkN5VWSk"; // deprecated
   
-  // Default Location (Vietnam)
-  static const double defaultLatitude = 16.0544;
-  static const double defaultLongitude = 108.2022;
-  static const double defaultZoom = 6.0;
+  // Default Location (Trung tâm Việt Nam)
+  static const double defaultLatitude = 16.0544;   // Huế
+  static const double defaultLongitude = 108.2022;  // Huế
+  static const double defaultZoom = 6.0; // zoom 6 — xem được toàn Việt Nam
 }

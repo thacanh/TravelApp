@@ -20,17 +20,17 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   void initState() {
     super.initState();
     _messages.add(ChatMessage(
-      text: 'Xin chào! 👋 Tôi là trợ lý du lịch AI của TRAWiMe.\n\n'
+      text: 'Xin chào! Tôi là trợ lý du lịch AI của TRAWIME.\n\n'
           'Tôi có thể giúp bạn:\n'
           '• Tìm kiếm thông tin địa điểm du lịch\n'
           '• Gợi ý lịch trình theo ngày\n'
           '• Trả lời câu hỏi về du lịch Việt Nam\n\n'
-          'Hỏi tôi bất cứ điều gì! 🗺️',
+          'Hỏi tôi bất cứ điều gì!',
       isUser: false,
       suggestions: [
-        '🏖 Bãi biển đẹp nhất Việt Nam',
-        '📋 Lịch trình 3 ngày Đà Nẵng',
-        '🍜 Ẩm thực Hà Nội',
+        'Bãi biển đẹp nhất Việt Nam',
+        'Lịch trình 3 ngày Đà Nẵng',
+        'Ẩm thực Hà Nội',
       ],
     ));
   }

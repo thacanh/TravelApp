@@ -1,0 +1,99 @@
+version: '3.8'
+
+services:
+  api-gateway:
+    build: ./api-gateway
+    container_name: trawime-gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - AUTH_SERVICE_URL=http://auth-service:8001
+      - USER_SERVICE_URL=http://user-service:8002
+      - LOCATION_SERVICE_URL=http://location-service:8003
+      - REVIEW_SERVICE_URL=http://review-service:8004
+      - ITINERARY_SERVICE_URL=http://itinerary-service:8005
+      - AI_SERVICE_URL=http://ai-service:8006
+      - ADMIN_SERVICE_URL=http://admin-service:8007
+      - SECRET_KEY=${SECRET_KEY:-09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7}
+    depends_on:
+      - auth-service
+      - user-service
+      - location-service
+      - review-service
+      - itinerary-service
+      - ai-service
+      - admin-service
+
+  auth-service:
+    build: ./auth-service
+    container_name: trawime-auth
+    ports:
+      - "8001:8001"
+    environment:
+      - DATABASE_URL=mysql+pymysql://root:220104@host.docker.internal:3306/trawime_db?charset=utf8mb4
+      - SECRET_KEY=${SECRET_KEY:-09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  user-service:
+    build: ./user-service
+    container_name: trawime-user
+    ports:
+      - "8002:8002"
+    environment:
+      - DATABASE_URL=mysql+pymysql://root:220104@host.docker.internal:3306/trawime_db?charset=utf8mb4
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  location-service:
+    build: ./location-service
+    container_name: trawime-location
+    ports:
+      - "8003:8003"
+    environment:
+      - DATABASE_URL=mysql+pymysql://root:220104@host.docker.internal:3306/trawime_db?charset=utf8mb4
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  review-service:
+    build: ./review-service
+    container_name: trawime-review
+    ports:
+      - "8004:8004"
+    environment:
+      - DATABASE_URL=mysql+pymysql://root:220104@host.docker.internal:3306/trawime_db?charset=utf8mb4
+      - LOCATION_SERVICE_URL=http://location-service:8003
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  itinerary-service:
+    build: ./itinerary-service
+    container_name: trawime-itinerary
+    ports:
+      - "8005:8005"
+    environment:
+      - DATABASE_URL=mysql+pymysql://root:220104@host.docker.internal:3306/trawime_db?charset=utf8mb4
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  ai-service:
+    build: ./ai-service
+    container_name: trawime-ai
+    ports:
+      - "8006:8006"
+    environment:
+      - DATABASE_URL=mysql+pymysql://root:220104@host.docker.internal:3306/trawime_db?charset=utf8mb4
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  admin-service:
+    build: ./admin-service
+    container_name: trawime-admin
+    ports:
+      - "8007:8007"
+    environment:
+      - DATABASE_URL=mysql+pymysql://root:220104@host.docker.internal:3306/trawime_db?charset=utf8mb4
+      - LOCATION_SERVICE_URL=http://location-service:8003
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

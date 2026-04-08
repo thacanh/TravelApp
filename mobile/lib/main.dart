@@ -22,7 +22,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => LocationProvider()),
       ],
       child: MaterialApp(
-        title: 'TRAWiMe - Ứng dụng Du lịch',
+        title: 'TRAWIME - Ứng dụng Du lịch',
         theme: AppTheme.lightTheme,
         debugShowCheckedModeBanner: false,
         home: const SplashWrapper(),
@@ -79,7 +79,7 @@ class _SplashWrapperState extends State<SplashWrapper> {
               ),
               SizedBox(height: 24),
               Text(
-                'TRAWiMe',
+                'TRAWIME',
                 style: TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,

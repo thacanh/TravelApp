@@ -256,7 +256,8 @@ class LocationGridItem extends StatelessWidget {
                         child: const Icon(Icons.image_not_supported_outlined, color: Colors.grey),
                       ),
                     ),
-                    // Rating badge
+                     // Rating badge — only show if there are reviews
+                    if (location.totalReviews > 0)
                     Positioned(
                       top: 8,
                       right: 8,
@@ -272,7 +273,7 @@ class LocationGridItem extends StatelessWidget {
                             const Icon(Icons.star_rounded, color: Colors.amber, size: 13),
                             const SizedBox(width: 2),
                             Text(
-                              location.ratingAvg.toStringAsFixed(1),
+                              location.ratingDisplay,
                               style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
                             ),
                           ],

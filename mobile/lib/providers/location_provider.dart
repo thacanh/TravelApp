@@ -50,14 +50,14 @@ class LocationProvider with ChangeNotifier {
 
   Future<void> fetchFeaturedLocations() async {
     try {
-      final response = await _apiService.getLocations(
-        limit: 10,
-        minRating: 4.5,
-      );
+      final response = await _apiService.getLocations(limit: 20);
 
       if (response.statusCode == 200) {
         final List<dynamic> data = response.data;
-        _featuredLocations = data.map((json) => Location.fromJson(json)).toList();
+        final all = data.map((json) => Location.fromJson(json)).toList();
+        // Sort by ratingAvg descending, pick top 10
+        all.sort((a, b) => b.ratingAvg.compareTo(a.ratingAvg));
+        _featuredLocations = all.take(10).toList();
         notifyListeners();
       }
     } catch (e) {

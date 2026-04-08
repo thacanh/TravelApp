@@ -97,7 +97,7 @@ class _CheckinScreenState extends State<CheckinScreen> {
       if (response.statusCode == 201 && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Đã ghi lại chuyến ghé thăm! 🎉'),
+            content: Text('Đã ghi lại chuyến ghé thăm!'),
             backgroundColor: AppTheme.successColor,
           ),
         );
