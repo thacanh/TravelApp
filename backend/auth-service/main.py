@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "mysql+pymysql://root:root@localhost/trawime_db?charset=utf8mb4"
     SECRET_KEY: str = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 10080  # 7 ngày
 
     class Config:
         env_file = ".env"
@@ -144,7 +144,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
     if not user.is_active:
         raise HTTPException(status_code=400, detail="Tài khoản chưa được kích hoạt")
     token = create_access_token(
-        data={"sub": user.email, "sub_id": user.id, "role": user.role},
+        data={"sub": user.email, "sub_id": user.id, "role": user.role, "name": user.full_name},
         expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
     )
     return {"access_token": token, "token_type": "bearer"}

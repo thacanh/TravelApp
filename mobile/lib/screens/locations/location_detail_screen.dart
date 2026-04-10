@@ -18,6 +18,7 @@ class _LocationDetailScreenState extends State<LocationDetailScreen> {
   final ApiService _apiService = ApiService();
   List<dynamic> _reviews = [];
   bool _isLoadingReviews = true;
+  bool _initialized = false;
 
   late Location location;
 
@@ -25,7 +26,10 @@ class _LocationDetailScreenState extends State<LocationDetailScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     location = ModalRoute.of(context)!.settings.arguments as Location;
-    _loadReviews();
+    if (!_initialized) {
+      _initialized = true;
+      _loadReviews();
+    }
   }
 
   Future<void> _loadReviews() async {

@@ -14,6 +14,7 @@ class Location {
   final double ratingAvg;     // Computed from reviews table (returned by API)
   final int totalReviews;     // Computed from reviews table (returned by API)
   final List<String> images;
+  final String? thumbnail;   // Ảnh đại diện; fallback = images[0]
   final DateTime createdAt;
 
   Location({
@@ -30,6 +31,7 @@ class Location {
     this.ratingAvg = 0.0,
     this.totalReviews = 0,
     required this.images,
+    this.thumbnail,
     required this.createdAt,
   });
 
@@ -50,6 +52,7 @@ class Location {
       ratingAvg: (json['rating_avg'] as num? ?? 0).toDouble(),
       totalReviews: (json['total_reviews'] as num? ?? 0).toInt(),
       images: List<String>.from(json['images'] ?? []),
+      thumbnail: json['thumbnail'] as String?,
       createdAt: DateTime.parse(json['created_at']),
     );
   }
@@ -69,9 +72,19 @@ class Location {
       'rating_avg': ratingAvg,
       'total_reviews': totalReviews,
       'images': images,
+      'thumbnail': thumbnail,
       'created_at': createdAt.toIso8601String(),
     };
   }
+
+  /// Effective thumbnail: explicit pick hoặc fallback images[0].
+  String? get effectiveThumbnail => thumbnail ?? (images.isNotEmpty ? images.first : null);
+
+  @override
+  bool operator ==(Object other) => other is Location && other.id == id;
+
+  @override
+  int get hashCode => id.hashCode;
 
   /// Returns human-readable category label.
   String get categoryDisplay {

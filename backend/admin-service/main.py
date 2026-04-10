@@ -76,6 +76,9 @@ class UserResponse(BaseModel):
 
 app = FastAPI(title="TRAWiMe Admin Service", version="2.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+# Admin service reads from shared DB — không tạo bảng riêng, chỉ dùng Base của các service khác
+# Nhưng vẫn gọi create_all để các bảng stub (User, Location, Review, Itinerary) được đảm bảo
+Base.metadata.create_all(bind=engine)
 
 @app.get("/health")
 def health(): return {"status": "healthy", "service": "admin-service"}

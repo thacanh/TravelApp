@@ -39,6 +39,7 @@ SERVICES = {
     "/api/locations":  os.getenv("LOCATION_SERVICE_URL",  "http://location-service:8003"),
     "/api/categories": os.getenv("LOCATION_SERVICE_URL",  "http://location-service:8003"),
     "/api/reviews":    os.getenv("REVIEW_SERVICE_URL",    "http://review-service:8004"),
+    "/api/checkins":   os.getenv("REVIEW_SERVICE_URL",    "http://review-service:8004"),  # check-in = review
     "/api/itineraries":os.getenv("ITINERARY_SERVICE_URL", "http://itinerary-service:8005"),
     "/api/ai":         os.getenv("AI_SERVICE_URL",        "http://ai-service:8006"),
     "/api/chat":       os.getenv("AI_SERVICE_URL",        "http://ai-service:8006"),
@@ -95,6 +96,7 @@ async def proxy(full_path: str, request: Request):
             "X-User-Id":    str(payload.get("sub_id", "")),
             "X-User-Role":  str(payload.get("role", "user")),
             "X-User-Email": str(payload.get("sub", "")),
+            "X-User-Name":  str(payload.get("name", "")),
         }
 
     # Forward request

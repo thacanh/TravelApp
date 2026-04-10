@@ -48,7 +48,8 @@ class _SplashWrapperState extends State<SplashWrapper> {
 
   Future<void> _checkAuth() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    await authProvider.checkAuthStatus();
+    await authProvider.checkAuthStatus()
+        .timeout(const Duration(seconds: 10), onTimeout: () {});
 
     if (mounted) {
       Navigator.of(context).pushReplacement(

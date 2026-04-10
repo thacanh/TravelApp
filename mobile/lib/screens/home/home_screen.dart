@@ -87,34 +87,35 @@ class HomeContent extends StatefulWidget {
 }
 
 class _HomeContentState extends State<HomeContent> {
-  final List<String> categories = ['beach', 'mountain', 'city', 'cultural', 'nature'];
-  final Map<String, String> categoryNames = {
-    'beach': 'Bãi biển',
-    'mountain': 'Núi',
-    'city': 'Thành phố',
-    'cultural': 'Văn hóa',
-    'nature': 'Thiên nhiên',
-  };
-  final Map<String, IconData> categoryIcons = {
+  // Map màu/icon fallback theo slug
+  final Map<String, IconData> _catIcons = {
     'beach': Icons.beach_access,
     'mountain': Icons.terrain,
     'city': Icons.location_city,
     'cultural': Icons.account_balance,
     'nature': Icons.nature,
+    'camping': Icons.outdoor_grill,
+    'historical': Icons.museum,
+    'food': Icons.restaurant,
   };
-  final Map<String, List<Color>> categoryGradients = {
+  final Map<String, List<Color>> _catColors = {
     'beach': [const Color(0xFF00BCD4), const Color(0xFF26C6DA)],
     'mountain': [const Color(0xFF4CAF50), const Color(0xFF66BB6A)],
     'city': [const Color(0xFFFF9800), const Color(0xFFFFB74D)],
     'cultural': [const Color(0xFF9C27B0), const Color(0xFFBA68C8)],
     'nature': [const Color(0xFF2E7D32), const Color(0xFF81C784)],
+    'camping': [const Color(0xFF795548), const Color(0xFFA1887F)],
+    'historical': [const Color(0xFF607D8B), const Color(0xFF90A4AE)],
+    'food': [const Color(0xFFE91E63), const Color(0xFFF48FB1)],
   };
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<LocationProvider>(context, listen: false).fetchLocations();
+      final p = Provider.of<LocationProvider>(context, listen: false);
+      p.fetchLocations();
+      p.fetchCategories();
     });
   }
 
@@ -249,46 +250,56 @@ class _HomeContentState extends State<HomeContent> {
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Danh mục', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-                const SizedBox(height: 14),
-                SizedBox(
-                  height: 88,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: categories.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 12),
-                    itemBuilder: (context, index) {
-                      final cat = categories[index];
-                      final gradient = categoryGradients[cat] ?? [AppTheme.primaryColor, AppTheme.secondaryColor];
-                      return GestureDetector(
-                        onTap: () => Navigator.pushNamed(context, AppRoutes.locationList),
-                        child: Column(
-                          children: [
-                            Container(
-                              width: 58,
-                              height: 58,
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(colors: [gradient[0].withAlpha(25), gradient[1].withAlpha(25)]),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: gradient[0].withAlpha(50)),
-                              ),
-                              child: Icon(categoryIcons[cat], color: gradient[0], size: 26),
+            child: Consumer<LocationProvider>(
+              builder: (context, locationProvider, _) {
+                final cats = locationProvider.categories;
+                if (cats.isEmpty) return const SizedBox.shrink();
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Danh mục', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      height: 88,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: cats.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 12),
+                        itemBuilder: (context, index) {
+                          final cat = cats[index];
+                          final gradient = _catColors[cat.slug] ?? [AppTheme.primaryColor, AppTheme.secondaryColor];
+                          return GestureDetector(
+                            onTap: () => Navigator.pushNamed(context, AppRoutes.locationList),
+                            child: Column(
+                              children: [
+                                Container(
+                                  width: 58,
+                                  height: 58,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(colors: [gradient[0].withAlpha(25), gradient[1].withAlpha(25)]),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(color: gradient[0].withAlpha(50)),
+                                  ),
+                                  child: Icon(
+                                    _catIcons[cat.slug] ?? Icons.place,
+                                    color: gradient[0],
+                                    size: 26,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  cat.name,
+                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 6),
-                            Text(
-                              categoryNames[cat] ?? cat,
-                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         ),
@@ -374,11 +385,7 @@ class _FeaturedLocationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = location.images.isNotEmpty
-        ? (location.images.first.startsWith('http')
-            ? location.images.first
-            : '${AppConfig.baseUrl}/${location.images.first}')
-        : null;
+    final imageUrl = location.effectiveThumbnail;
 
     return GestureDetector(
       onTap: () => Navigator.pushNamed(context, AppRoutes.locationDetail, arguments: location),

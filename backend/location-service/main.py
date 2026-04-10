@@ -1,10 +1,16 @@
 """location-service: handles /api/locations/* and /api/categories/*"""
 import math
+import os
+import uuid
 import httpx
+import aiofiles
+from pathlib import Path
 from typing import Optional, List
 from datetime import datetime
-from fastapi import FastAPI, Depends, HTTPException, Query, Header, BackgroundTasks
+from fastapi import FastAPI, Depends, HTTPException, Query, Header, BackgroundTasks, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, JSON, Text, ForeignKey, func
 from sqlalchemy.ext.declarative import declarative_base
@@ -16,9 +22,20 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     DATABASE_URL: str = "mysql+pymysql://root:root@localhost/trawime_db?charset=utf8mb4"
     AI_SERVICE_URL: str = "http://ai-service:8006"
+    BASE_URL: str = "http://localhost:8003"   # URL public để tạo link media
     class Config: env_file = ".env"
 
 settings = Settings()
+
+# ── Media storage ─────────────────────────────────────────────────────────────
+MEDIA_DIR = Path("/app/media")
+MEDIA_DIR.mkdir(parents=True, exist_ok=True)
+
+ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+ALLOWED_VIDEO_TYPES = {"video/mp4", "video/quicktime", "video/x-msvideo", "video/webm"}
+ALLOWED_MEDIA_TYPES = ALLOWED_IMAGE_TYPES | ALLOWED_VIDEO_TYPES
+MAX_IMAGE_SIZE = 10 * 1024 * 1024   # 10 MB
+MAX_VIDEO_SIZE = 100 * 1024 * 1024  # 100 MB
 
 async def _trigger_embedding(location_id: int):
     """Fire-and-forget: ask ai-service to embed this location."""
@@ -42,7 +59,6 @@ class Category(Base):
     id = Column(Integer, primary_key=True, index=True)
     slug = Column(String(50), unique=True, index=True, nullable=False)
     name = Column(String(100), nullable=False)
-    icon = Column(String(50), nullable=True)
 
 class LocationCategory(Base):
     __tablename__ = "location_categories"
@@ -61,6 +77,7 @@ class Location(Base):
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
     images = Column(JSON, default=list)
+    thumbnail = Column(String(2048), nullable=True)   # Ảnh đại diện do người dùng chọn
     description_embedding = Column(JSON, nullable=True)
     created_by = Column(Integer, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -94,7 +111,7 @@ def require_admin(current: CurrentUser = Depends(get_current_user)) -> CurrentUs
 
 # ── Schemas ────────────────────────────────────────────────────────────────────
 class CategoryResponse(BaseModel):
-    id: int; slug: str; name: str; icon: Optional[str]
+    id: int; slug: str; name: str
     class Config: from_attributes = True
 
 class LocationResponse(BaseModel):
@@ -102,13 +119,14 @@ class LocationResponse(BaseModel):
     address: Optional[str]; city: str; country: str
     latitude: Optional[float]; longitude: Optional[float]
     rating_avg: float; total_reviews: int
-    images: Optional[list]; created_at: datetime
+    images: Optional[list]; thumbnail: Optional[str]; created_at: datetime
 
 class LocationCreate(BaseModel):
     name: str; description: Optional[str] = None; category: str
     address: Optional[str] = None; city: str; country: str = "Vietnam"
     latitude: Optional[float] = None; longitude: Optional[float] = None
     images: Optional[list] = []
+    thumbnail: Optional[str] = None
 
 class LocationUpdate(BaseModel):
     name: Optional[str] = None; description: Optional[str] = None
@@ -116,6 +134,7 @@ class LocationUpdate(BaseModel):
     city: Optional[str] = None; country: Optional[str] = None
     latitude: Optional[float] = None; longitude: Optional[float] = None
     images: Optional[list] = None
+    thumbnail: Optional[str] = None
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 def haversine(lat1, lon1, lat2, lon2) -> float:
@@ -133,13 +152,16 @@ def _enrich(loc: Location, db: Session) -> dict:
     ).filter(Review.location_id == loc.id).first()
     rating_avg = round(float(result.avg_rating), 2) if result.avg_rating else 0.0
     total_reviews = result.total or 0
+    imgs = loc.images or []
     return {
         "id": loc.id, "name": loc.name, "description": loc.description,
         "category": loc.category, "address": loc.address,
         "city": loc.city, "country": loc.country,
         "latitude": loc.latitude, "longitude": loc.longitude,
         "rating_avg": rating_avg, "total_reviews": total_reviews,
-        "images": loc.images or [], "created_at": loc.created_at,
+        "images": imgs,
+        "thumbnail": loc.thumbnail or (imgs[0] if imgs else None),
+        "created_at": loc.created_at,
     }
 
 def _enrich_many(locs: list, db: Session) -> list:
@@ -157,6 +179,7 @@ def _enrich_many(locs: list, db: Session) -> list:
     result = []
     for loc in locs:
         avg, total = stats.get(loc.id, (None, 0))
+        imgs = loc.images or []
         result.append({
             "id": loc.id, "name": loc.name, "description": loc.description,
             "category": loc.category, "address": loc.address,
@@ -164,7 +187,9 @@ def _enrich_many(locs: list, db: Session) -> list:
             "latitude": loc.latitude, "longitude": loc.longitude,
             "rating_avg": round(float(avg), 2) if avg else 0.0,
             "total_reviews": total or 0,
-            "images": loc.images or [], "created_at": loc.created_at,
+            "images": imgs,
+            "thumbnail": loc.thumbnail or (imgs[0] if imgs else None),
+            "created_at": loc.created_at,
         })
     return result
 
@@ -172,10 +197,59 @@ def _enrich_many(locs: list, db: Session) -> list:
 app = FastAPI(title="TRAWiMe Location Service", version="2.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
+# Tạo tất cả bảng nếu chưa có
+Base.metadata.create_all(bind=engine)
+
+# Serve uploaded media as static files at /media/<filename>
+app.mount("/media", StaticFiles(directory=str(MEDIA_DIR)), name="media")
+
 @app.get("/health")
 def health(): return {"status": "healthy", "service": "location-service"}
 
-# Categories
+# Media Upload
+@app.post("/api/locations/upload-media")
+async def upload_media(
+    file: UploadFile = File(...),
+    current: CurrentUser = Depends(require_admin),
+):
+    """Upload ảnh hoặc video cho địa điểm. Trả về URL public có thể dùng trong trường images."""
+    if file.content_type not in ALLOWED_MEDIA_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Loại file không hỗ trợ: {file.content_type}. Chấp nhận: ảnh (jpg/png/webp/gif) và video (mp4/mov/avi/webm)",
+        )
+
+    # Đọc file để kiểm tra kích thước
+    contents = await file.read()
+    is_video = file.content_type in ALLOWED_VIDEO_TYPES
+    max_size = MAX_VIDEO_SIZE if is_video else MAX_IMAGE_SIZE
+    if len(contents) > max_size:
+        limit_mb = max_size // (1024 * 1024)
+        raise HTTPException(status_code=413, detail=f"File quá lớn. Giới hạn: {limit_mb}MB")
+
+    # Sinh tên file unique
+    ext = Path(file.filename).suffix.lower() if file.filename else ".bin"
+    filename = f"{uuid.uuid4().hex}{ext}"
+    dest = MEDIA_DIR / filename
+
+    async with aiofiles.open(dest, "wb") as f:
+        await f.write(contents)
+
+    url = f"{settings.BASE_URL}/media/{filename}"
+    return {"url": url, "filename": filename, "type": "video" if is_video else "image", "size": len(contents)}
+
+@app.delete("/api/locations/media/{filename}", status_code=200)
+async def delete_media(filename: str, current: CurrentUser = Depends(require_admin)):
+    """Xóa file ảnh/video khỏi disk. Chỉ admin mới được phép."""
+    # Bảo vệ path traversal
+    if "/" in filename or "\\" in filename or ".." in filename:
+        raise HTTPException(status_code=400, detail="Tên file không hợp lệ")
+    dest = MEDIA_DIR / filename
+    if not dest.exists():
+        raise HTTPException(status_code=404, detail="File không tồn tại")
+    dest.unlink()
+    return {"deleted": filename}
+
 @app.get("/api/categories", response_model=List[CategoryResponse])
 def get_categories(db: Session = Depends(get_db)):
     return db.query(Category).order_by(Category.name).all()

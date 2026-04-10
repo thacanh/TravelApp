@@ -115,7 +115,19 @@ class ApiService {
   Future<Response> deleteLocation(int id) async {
     return await _dio.delete('/api/locations/$id');
   }
-  
+
+  Future<Response> uploadLocationMedia(String filePath, String mimeType) async {
+    final formData = FormData.fromMap({
+      'file': await MultipartFile.fromFile(filePath, contentType: DioMediaType.parse(mimeType)),
+    });
+    return await _dio.post('/api/locations/upload-media', data: formData);
+  }
+
+  /// Xóa file media khỏi server. [filename] là tên file (không phải full URL).
+  Future<void> deleteLocationMedia(String filename) async {
+    await _dio.delete('/api/locations/media/$filename');
+  }
+
   // Check-in APIs
   Future<Response> createCheckin(Map<String, dynamic> data) async {
     return await _dio.post('/api/checkins', data: data);

@@ -22,6 +22,7 @@ class _CheckinScreenState extends State<CheckinScreen> {
   List<Location> _locations = [];
   bool _isLoadingLocations = true;
 
+  @override
   void initState() {
     super.initState();
     _loadLocations();
@@ -33,6 +34,10 @@ class _CheckinScreenState extends State<CheckinScreen> {
     final args = ModalRoute.of(context)?.settings.arguments;
     if (args is Location && _selectedLocation == null) {
       _selectedLocation = args;
+      // Thêm ngay vào _locations để dropdown có item hợp lệ trước khi load xong
+      if (!_locations.any((l) => l.id == args.id)) {
+        setState(() => _locations = [args, ..._locations]);
+      }
     }
   }
 
@@ -45,15 +50,22 @@ class _CheckinScreenState extends State<CheckinScreen> {
   Future<void> _loadLocations() async {
     try {
       final response = await _apiService.getLocations(limit: 100);
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 && mounted) {
         final List<dynamic> data = response.data;
+        final loaded = data.map((json) => Location.fromJson(json)).toList();
         setState(() {
-          _locations = data.map((json) => Location.fromJson(json)).toList();
+          // Giữ _selectedLocation ở đầu nếu chưa nằm trong danh sách load về
+          final ids = loaded.map((l) => l.id).toSet();
+          _locations = [
+            if (_selectedLocation != null && !ids.contains(_selectedLocation!.id))
+              _selectedLocation!,
+            ...loaded,
+          ];
           _isLoadingLocations = false;
         });
       }
     } catch (e) {
-      setState(() => _isLoadingLocations = false);
+      if (mounted) setState(() => _isLoadingLocations = false);
     }
   }
 

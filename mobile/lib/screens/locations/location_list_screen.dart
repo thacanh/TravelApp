@@ -248,7 +248,7 @@ class LocationGridItem extends StatelessWidget {
                   fit: StackFit.expand,
                   children: [
                     CachedNetworkImage(
-                      imageUrl: location.images.isNotEmpty ? location.images.first : '',
+                      imageUrl: location.effectiveThumbnail ?? '',
                       fit: BoxFit.cover,
                       placeholder: (_, __) => Container(color: const Color(0xFFEEEEEE)),
                       errorWidget: (_, __, ___) => Container(

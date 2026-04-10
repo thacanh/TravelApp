@@ -99,6 +99,8 @@ def _save_file(upload_file: UploadFile, subfolder: str) -> str:
 app = FastAPI(title="TRAWiMe User Service", version="2.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
+Base.metadata.create_all(bind=engine)
+
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
 
