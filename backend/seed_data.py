@@ -6,21 +6,29 @@ Cách dùng:
 
 Yêu cầu:
     - Docker đang chạy (docker compose up -d)
-    - pip install requests
+    - pip install requests pymysql
 
 Môi trường mặc định: http://192.168.100.222:8000
-Đổi BASE_URL bên dưới nếu cần.
+Đổi BASE_URL / DB_* bên dưới nếu cần.
 """
 
 import sys
 import time
-import json
 import requests
+import pymysql
 
 # ─── Config ───────────────────────────────────────────────────────────────────
-BASE_URL   = "http://192.168.100.222:8000"
+BASE_URL       = "http://192.168.100.222:8000"
 ADMIN_EMAIL    = "admin@trawime.com"
 ADMIN_PASSWORD = "Admin@123"
+ADMIN_NAME     = "Admin TRAWiMe"
+
+# Kết nối DB trực tiếp để set role=admin (auth-service không có endpoint đổi role)
+DB_HOST = "192.168.100.222"
+DB_PORT = 3306
+DB_USER = "root"
+DB_PASS = "220104"
+DB_NAME = "trawime_db"
 
 # ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -217,6 +225,40 @@ def _login(email, password):
 
 # ─── Steps ────────────────────────────────────────────────────────────────────
 
+def step_create_admin():
+    """Tạo tài khoản admin nếu chưa có, sau đó set role=admin trực tiếp trong DB."""
+    print("\n[0/6] Kiểm tra tài khoản admin...")
+
+    # Thử đăng nhập trước
+    token = _login(ADMIN_EMAIL, ADMIN_PASSWORD)
+    if token:
+        print(f"  ✓ Admin đã có: {ADMIN_EMAIL}")
+        return
+
+    # Đăng ký tài khoản mới
+    resp = _post("/api/auth/register", {
+        "email": ADMIN_EMAIL,
+        "password": ADMIN_PASSWORD,
+        "full_name": ADMIN_NAME,
+    })
+    if resp.status_code not in (200, 201):
+        print(f"  ✗ Không thể đăng ký admin: {resp.text}")
+        print("  → Tạo thủ công qua MySQL hoặc kiểm tra backend.")
+        sys.exit(1)
+
+    # Set role=admin qua DB trực tiếp
+    try:
+        conn = pymysql.connect(host=DB_HOST, port=DB_PORT, user=DB_USER,
+                               password=DB_PASS, database=DB_NAME, charset="utf8mb4")
+        with conn.cursor() as cur:
+            cur.execute("UPDATE users SET role='admin' WHERE email=%s", (ADMIN_EMAIL,))
+        conn.commit()
+        conn.close()
+        print(f"  ✓ Tạo admin thành công: {ADMIN_EMAIL}")
+    except Exception as e:
+        print(f"  ✗ Không thể set role=admin qua DB: {e}")
+        print("  → Tự chạy: UPDATE users SET role='admin' WHERE email='admin@trawime.com';")
+
 def step_admin_token():
     print("\n[1/6] Đăng nhập admin...")
     token = _login(ADMIN_EMAIL, ADMIN_PASSWORD)
@@ -366,6 +408,7 @@ def main():
         print("  → Đảm bảo Docker đang chạy: docker compose up -d")
         sys.exit(1)
 
+    step_create_admin()
     admin_token  = step_admin_token()
     step_categories(admin_token)
     location_ids = step_locations(admin_token)

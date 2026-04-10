@@ -254,6 +254,33 @@ async def delete_media(filename: str, current: CurrentUser = Depends(require_adm
 def get_categories(db: Session = Depends(get_db)):
     return db.query(Category).order_by(Category.name).all()
 
+class CategoryCreate(BaseModel):
+    slug: str
+    name: str
+
+@app.post("/api/categories", response_model=CategoryResponse, status_code=201)
+def create_category(
+    data: CategoryCreate,
+    current: CurrentUser = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    if db.query(Category).filter(Category.slug == data.slug).first():
+        raise HTTPException(status_code=400, detail=f"Danh mục '{data.slug}' đã tồn tại")
+    cat = Category(slug=data.slug, name=data.name)
+    db.add(cat); db.commit(); db.refresh(cat)
+    return cat
+
+@app.delete("/api/categories/{slug}", status_code=204)
+def delete_category(
+    slug: str,
+    current: CurrentUser = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    cat = db.query(Category).filter(Category.slug == slug).first()
+    if not cat:
+        raise HTTPException(status_code=404, detail="Không tìm thấy danh mục")
+    db.delete(cat); db.commit()
+
 # Locations
 @app.get("/api/locations")
 def get_locations(

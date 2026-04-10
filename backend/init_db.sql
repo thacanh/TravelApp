@@ -148,15 +148,9 @@ CREATE TABLE IF NOT EXISTS chat_messages (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ── SEED DATA ─────────────────────────────────────────────────────────────────
--- Dữ liệu demo được tạo bởi: python seed_data.py
--- Chỉ tạo tài khoản admin mặc định ở đây.
+-- Toàn bộ dữ liệu demo (categories, locations, users, reviews) được tạo bởi:
+--   python seed_data.py
+--
+-- Script init_db.sql chỉ tạo schema (cấu trúc bảng), KHÔNG insert data.
 
--- Tài khoản admin mặc định (password: Admin@123)
--- bcrypt hash của 'Admin@123'
-INSERT IGNORE INTO users (email, password_hash, full_name, role) VALUES
-    ('admin@trawime.com',
-     '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
-     'Admin TRAWiMe',
-     'admin');
-
-SELECT 'Database initialized successfully! Run: python seed_data.py' AS status;
+SELECT 'Tables created! Now run: python seed_data.py' AS next_step;
