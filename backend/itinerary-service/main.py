@@ -70,9 +70,6 @@ class ItineraryActivity(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     day = relationship("ItineraryDay", back_populates="activities")
 
-Base.metadata.create_all(bind=engine)
-
-
 def get_db():
     db = SessionLocal()
     try: yield db

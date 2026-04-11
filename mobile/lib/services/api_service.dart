@@ -11,7 +11,7 @@ class ApiService {
   
   ApiService._internal() {
     _dio = Dio(BaseOptions(
-      baseUrl: AppConfig.baseUrl,
+      baseUrl: AppConfig.baseUrl,   // đọc từ .env qua dotenv
       connectTimeout: AppConfig.connectTimeout,
       receiveTimeout: AppConfig.receiveTimeout,
       headers: {
@@ -61,10 +61,14 @@ class ApiService {
     return await _dio.post('/api/auth/login', data: formData);
   }
   
-  Future<Response> getCurrentUser() async {
+  Future<Response> getUserProfile() async {
+    return await _dio.get('/api/users/profile');
+  }
+
+  Future<Response> getCurrentUserFromAuth() async {
     return await _dio.get('/api/auth/me');
   }
-  
+
   // Category APIs
   Future<Response> getCategories() async {
     return await _dio.get('/api/categories');
@@ -156,6 +160,14 @@ class ApiService {
     return await _dio.post('/api/reviews', data: data);
   }
 
+  Future<Response> updateReview(int reviewId, Map<String, dynamic> data) async {
+    return await _dio.put('/api/reviews/$reviewId', data: data);
+  }
+
+  Future<Response> deleteReview(int reviewId) async {
+    return await _dio.delete('/api/reviews/$reviewId');
+  }
+
   Future<Response> uploadReviewPhotos(List<String> filePaths) async {
     final formData = FormData();
     for (var path in filePaths) {
@@ -227,8 +239,15 @@ class ApiService {
   }
 
   Future<Response> uploadAvatar(String filePath) async {
+    // Lấy tên file và đảm bảo có extension để backend detect đúng
+    final fileName = filePath.split('/').last.split('\\').last;
+    final ext = fileName.contains('.') ? fileName.split('.').last.toLowerCase() : 'jpg';
+    final safeFileName = 'avatar.$ext';
     final formData = FormData.fromMap({
-      'file': await MultipartFile.fromFile(filePath),
+      'file': await MultipartFile.fromFile(
+        filePath,
+        filename: safeFileName,
+      ),
     });
     return await _dio.post('/api/users/avatar', data: formData);
   }
@@ -238,6 +257,19 @@ class ApiService {
       'current_password': currentPassword,
       'new_password': newPassword,
     });
+  }
+
+  // Favorite APIs
+  Future<Response> getFavorites() async {
+    return await _dio.get('/api/users/favorites');
+  }
+
+  Future<Response> addFavorite(int locationId) async {
+    return await _dio.post('/api/users/favorites/$locationId');
+  }
+
+  Future<Response> removeFavorite(int locationId) async {
+    return await _dio.delete('/api/users/favorites/$locationId');
   }
 
   // AI APIs
@@ -267,7 +299,7 @@ class ApiService {
     return await _dio.put('/api/admin/users/$userId/toggle-active');
   }
 
-  Future<Response> getAdminReviews({int skip = 0, int limit = 50}) async {
+  Future<Response> getAdminReviews({int skip = 0, int limit = 200}) async {
     return await _dio.get('/api/admin/reviews', queryParameters: {
       'skip': skip,
       'limit': limit,

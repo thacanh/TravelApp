@@ -41,13 +41,15 @@ class _MapScreenState extends State<MapScreen> {
         return;
       }
 
-      final position = await Geolocator.getCurrentPosition(
+      Position? position = await Geolocator.getLastKnownPosition();
+      position ??= await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.medium,
+        timeLimit: const Duration(seconds: 5), // Timeout for emulator
       );
 
-      if (mounted) {
+      if (mounted && position != null) {
         setState(() {
-          _currentPosition = LatLng(position.latitude, position.longitude);
+          _currentPosition = LatLng(position!.latitude, position!.longitude);
           _gotUserLocation = true;
         });
         _mapController.move(_currentPosition, 12);
@@ -111,7 +113,8 @@ class _MapScreenState extends State<MapScreen> {
     // Location markers
     for (final loc in _locations) {
       if (loc.latitude != null && loc.longitude != null) {
-        final color = _categoryColor(loc.category);
+        final firstSlug = loc.categories.isNotEmpty ? loc.categories.first.slug : '';
+        final color = _categoryColor(firstSlug);
         markers.add(Marker(
           point: LatLng(loc.latitude!, loc.longitude!),
           width: 36,

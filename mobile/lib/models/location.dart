@@ -4,7 +4,6 @@ class Location {
   final int id;
   final String name;
   final String? description;
-  final String category;
   final List<Category> categories;
   final String? address;
   final String city;
@@ -21,7 +20,6 @@ class Location {
     required this.id,
     required this.name,
     this.description,
-    required this.category,
     this.categories = const [],
     this.address,
     required this.city,
@@ -40,7 +38,6 @@ class Location {
       id: json['id'],
       name: json['name'],
       description: json['description'],
-      category: json['category'],
       categories: json['categories'] != null
           ? (json['categories'] as List).map((c) => Category.fromJson(c)).toList()
           : [],
@@ -62,7 +59,6 @@ class Location {
       'id': id,
       'name': name,
       'description': description,
-      'category': category,
       'categories': categories.map((c) => c.toJson()).toList(),
       'address': address,
       'city': city,
@@ -86,16 +82,12 @@ class Location {
   @override
   int get hashCode => id.hashCode;
 
-  /// Returns human-readable category label.
+  /// Returns human-readable category label (lấy từ danh sách categories N-N).
   String get categoryDisplay {
-    switch (category) {
-      case 'beach':     return 'Bãi biển';
-      case 'mountain':  return 'Núi';
-      case 'city':      return 'Thành phố';
-      case 'cultural':  return 'Văn hóa';
-      case 'nature':    return 'Thiên nhiên';
-      default:          return category;
+    if (categories.isNotEmpty) {
+      return categories.map((c) => c.name).join(', ');
     }
+    return 'Khác'; // Fallback khi chưa có category
   }
 
   /// Formatted rating string, e.g. "4.5" or "Chưa có".

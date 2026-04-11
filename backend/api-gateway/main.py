@@ -5,6 +5,7 @@ API Gateway — Single entry point for all TRAWiMe microservices.
 """
 import os
 import logging
+from urllib.parse import quote, unquote
 from fastapi import FastAPI, Request, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -34,20 +35,27 @@ SECRET_KEY = os.getenv("SECRET_KEY", "09d25e094faa6ca2556c818166b7a9563b93f7099f
 ALGORITHM = "HS256"
 
 SERVICES = {
-    "/api/auth":       os.getenv("AUTH_SERVICE_URL",      "http://auth-service:8001"),
-    "/api/users":      os.getenv("USER_SERVICE_URL",      "http://user-service:8002"),
-    "/api/locations":  os.getenv("LOCATION_SERVICE_URL",  "http://location-service:8003"),
-    "/api/categories": os.getenv("LOCATION_SERVICE_URL",  "http://location-service:8003"),
-    "/api/reviews":    os.getenv("REVIEW_SERVICE_URL",    "http://review-service:8004"),
-    "/api/checkins":   os.getenv("REVIEW_SERVICE_URL",    "http://review-service:8004"),  # check-in = review
-    "/api/itineraries":os.getenv("ITINERARY_SERVICE_URL", "http://itinerary-service:8005"),
-    "/api/ai":         os.getenv("AI_SERVICE_URL",        "http://ai-service:8006"),
-    "/api/chat":       os.getenv("AI_SERVICE_URL",        "http://ai-service:8006"),
-    "/api/admin":      os.getenv("ADMIN_SERVICE_URL",     "http://admin-service:8007"),
+    "/api/auth":            os.getenv("AUTH_SERVICE_URL",      "http://auth-service:8001"),
+    "/api/users":           os.getenv("USER_SERVICE_URL",      "http://user-service:8002"),
+    "/uploads/avatars":     os.getenv("USER_SERVICE_URL",      "http://user-service:8002"),  # avatar tĩnh
+    "/uploads/reviews":     os.getenv("REVIEW_SERVICE_URL",    "http://review-service:8004"),  # ảnh review
+    "/uploads":             os.getenv("USER_SERVICE_URL",      "http://user-service:8002"),  # fallback
+    "/api/locations":       os.getenv("LOCATION_SERVICE_URL",  "http://location-service:8003"),
+    "/api/categories":      os.getenv("LOCATION_SERVICE_URL",  "http://location-service:8003"),
+    "/media":               os.getenv("LOCATION_SERVICE_URL",  "http://location-service:8003"),  # static media
+    "/api/reviews":         os.getenv("REVIEW_SERVICE_URL",    "http://review-service:8004"),
+    "/api/checkins":        os.getenv("REVIEW_SERVICE_URL",    "http://review-service:8004"),
+    "/api/itineraries":     os.getenv("ITINERARY_SERVICE_URL", "http://itinerary-service:8005"),
+    "/api/ai":              os.getenv("AI_SERVICE_URL",        "http://ai-service:8006"),
+    "/api/chat":            os.getenv("AI_SERVICE_URL",        "http://ai-service:8006"),
+    "/api/admin":           os.getenv("ADMIN_SERVICE_URL",     "http://admin-service:8007"),
 }
 
 # Public routes that don't need a valid JWT
 PUBLIC_PATHS = {"/api/auth/login", "/api/auth/register", "/", "/health", "/docs", "/openapi.json"}
+
+# Prefix paths that are public (static files, no auth needed)
+PUBLIC_PREFIXES = ("/uploads/", "/uploads/reviews/", "/uploads/avatars/", "/media/")
 
 # ── JWT helper ────────────────────────────────────────────────────────────────
 
@@ -84,9 +92,10 @@ async def proxy(full_path: str, request: Request):
     if not service_url:
         raise HTTPException(status_code=404, detail=f"No service handles path: {path}")
 
-    # Auth check
+    # Auth check — bỏ qua với static files
     extra_headers: dict = {}
-    if path not in PUBLIC_PATHS:
+    is_public = path in PUBLIC_PATHS or any(path.startswith(p) for p in PUBLIC_PREFIXES)
+    if not is_public:
         auth_header = request.headers.get("Authorization", "")
         if not auth_header.startswith("Bearer "):
             raise HTTPException(status_code=401, detail="Missing Bearer token")
@@ -95,32 +104,54 @@ async def proxy(full_path: str, request: Request):
         extra_headers = {
             "X-User-Id":    str(payload.get("sub_id", "")),
             "X-User-Role":  str(payload.get("role", "user")),
-            "X-User-Email": str(payload.get("sub", "")),
-            "X-User-Name":  str(payload.get("name", "")),
+            "X-User-Email": quote(str(payload.get("sub", "")), safe="@."),
+            # URL-encode tên tiếng Việt — HTTP headers phải là ASCII
+            "X-User-Name":  quote(str(payload.get("name", "")), safe=""),
         }
 
-    # Forward request
+    # Build target URL
     target_url = service_url.rstrip("/") + path
     if request.url.query:
         target_url += "?" + request.url.query
 
-    headers = dict(request.headers)
-    headers.pop("host", None)
+    # Forward request — chỉ giữ header ASCII hợp lệ, bỏ hop-by-hop headers
+    HOP_BY_HOP = {
+        "host", "content-length", "transfer-encoding",
+        "connection", "keep-alive", "te", "trailers", "upgrade",
+    }
+    headers = {}
+    for k, v in request.headers.items():
+        if not isinstance(k, str) or not isinstance(v, str):
+            continue
+        if k.lower() in HOP_BY_HOP:
+            continue
+        # Bỏ header có giá trị không phải ASCII — httpx chỉ chấp nhận ASCII
+        try:
+            v.encode('ascii')
+            headers[k] = v
+        except UnicodeEncodeError:
+            pass  # Bỏ qua header có Unicode (sẽ được thay thế bởi extra_headers)
     headers.update(extra_headers)
 
-    body = await request.body()
+    # Stream the request body for large uploads (multipart form data)
+    async def stream_body():
+        async for chunk in request.stream():
+            yield chunk
 
-    async with httpx.AsyncClient(timeout=60) as client:
+    async with httpx.AsyncClient(timeout=120) as client:
         try:
             resp = await client.request(
                 method=request.method,
                 url=target_url,
                 headers=headers,
-                content=body,
+                content=stream_body() if request.method in ["POST", "PUT", "PATCH"] else None,
             )
         except httpx.ConnectError as e:
             logger.error(f"Cannot connect to {service_url}: {e}")
             raise HTTPException(status_code=503, detail=f"Service unavailable: {service_url}")
+        except Exception as e:
+            logger.error(f"Proxy error forwarding to {target_url}: {e}")
+            raise HTTPException(status_code=502, detail=f"Bad gateway: {e}")
 
     return StreamingResponse(
         content=resp.aiter_bytes(),

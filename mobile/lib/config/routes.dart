@@ -11,8 +11,11 @@ import '../screens/itinerary/itinerary_route_map_screen.dart';
 import '../screens/ai/ai_recommend_screen.dart';
 import '../screens/ai/chatbot_screen.dart';
 import '../screens/map/map_screen.dart';
+import '../screens/map/map_screen.dart';
 import '../screens/profile/profile_screen.dart';
 import '../screens/profile/edit_profile_screen.dart';
+import '../screens/profile/favorite_locations_screen.dart';
+import '../screens/profile/my_reviews_screen.dart';
 import '../screens/admin/admin_dashboard_screen.dart';
 import '../screens/admin/admin_users_screen.dart';
 import '../screens/admin/admin_reviews_screen.dart';
@@ -34,6 +37,8 @@ class AppRoutes {
   static const String map = '/map';
   static const String profile = '/profile';
   static const String editProfile = '/edit-profile';
+  static const String favoriteLocations = '/favorite-locations';
+  static const String myReviews = '/my-reviews';
   // Admin routes
   static const String adminDashboard = '/admin/dashboard';
   static const String adminUsers = '/admin/users';
@@ -57,6 +62,8 @@ class AppRoutes {
       map: (context) => const MapScreen(),
       profile: (context) => const ProfileScreen(),
       editProfile: (context) => const EditProfileScreen(),
+      favoriteLocations: (context) => const FavoriteLocationsScreen(),
+      myReviews: (context) => const MyReviewsScreen(),
       // Admin routes
       adminDashboard: (context) => const AdminDashboardScreen(),
       adminUsers: (context) => const AdminUsersScreen(),

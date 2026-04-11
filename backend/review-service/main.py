@@ -46,6 +46,7 @@ def get_db():
     try: yield db
     finally: db.close()
 
+from urllib.parse import unquote
 class CurrentUser:
     def __init__(self, id: int, role: str, email: str = "", name: str = ""):
         self.id = id; self.role = role; self.email = email; self.name = name
@@ -60,19 +61,45 @@ def get_current_user(
         raise HTTPException(status_code=401, detail="Missing auth headers")
     return CurrentUser(
         id=int(x_user_id),
-        role=x_user_role or "user",
-        email=x_user_email or "",
-        name=x_user_name or "",
+        role=unquote(x_user_role) if x_user_role else "user",
+        email=unquote(x_user_email) if x_user_email else "",
+        name=unquote(x_user_name) if x_user_name else "",
     )
 
+import re as _re
+
+# Pattern nhận dạng URL đang trỏ thẳng vào port của service (không qua gateway)
+_OLD_PORT_PATTERN = _re.compile(r'https?://[^/]+:\d+/')
+
+def _normalize_photo_url(p: str) -> str:
+    """Chuẩn hóa URL ảnh về dạng dùng gateway."""
+    if not p:
+        return p
+    if p.startswith("http"):
+        # Nếu URL trỏ thẳng vào port service (VD: :8004) → remap qua BASE_URL
+        def _replace_base(m):
+            path_part = p[m.end()-1:]  # lấy phần /uploads/reviews/xxx.jpg
+            return settings.BASE_URL + path_part
+        return _OLD_PORT_PATTERN.sub(lambda m: settings.BASE_URL + "/" , p, count=1).rstrip("/") if _OLD_PORT_PATTERN.search(p) else p
+    # Relative path
+    return f"{settings.BASE_URL}/uploads/{p}"
+
 def _make_photo_urls(photos: list) -> list:
-    """Chuyển relative path thành full URL."""
+    """Chuyển relative path / old URL thành full URL qua gateway."""
     result = []
     for p in (photos or []):
-        if p and not p.startswith("http"):
-            result.append(f"{settings.BASE_URL}/uploads/{p}")
+        if not p:
+            continue
+        if p.startswith("http"):
+            # Normalize nếu URL trỏ thẳng vào port service cũ
+            if _OLD_PORT_PATTERN.search(p):
+                # Giữ nguyên path, chỉ thay phần host:port
+                path = "/" + p.split("/", 3)[-1]  # /uploads/reviews/xxx.jpg
+                result.append(settings.BASE_URL + path)
+            else:
+                result.append(p)
         else:
-            result.append(p)
+            result.append(f"{settings.BASE_URL}/uploads/{p}")
     return result
 
 # Schemas
@@ -127,8 +154,6 @@ ALLOWED_EXT = {"png", "jpg", "jpeg", "gif", "webp"}
 
 app = FastAPI(title="TRAWiMe Review Service", version="2.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
-
-Base.metadata.create_all(bind=engine)
 
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")

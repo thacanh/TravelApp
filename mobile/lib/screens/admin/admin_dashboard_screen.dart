@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../config/theme.dart';
 import '../../services/api_service.dart';
+import 'package:provider/provider.dart';
+import '../../providers/location_provider.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -57,7 +59,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   const SizedBox(height: 24),
                   // Category breakdown
                   if (_stats?['locations']?['by_category'] != null)
-                    _buildCategoryBreakdown(),
+                    _buildCategoryBreakdown(context),
                 ],
               ),
             ),
@@ -152,22 +154,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildCategoryBreakdown() {
+  Widget _buildCategoryBreakdown(BuildContext context) {
     final categories = _stats!['locations']['by_category'] as Map<String, dynamic>;
-    final categoryNames = {
-      'beach': 'Bãi biển',
-      'mountain': 'Núi',
-      'city': 'Thành phố',
-      'cultural': 'Văn hóa',
-      'nature': 'Thiên nhiên',
-    };
-    final categoryColors = {
-      'beach': Colors.blue,
-      'mountain': Colors.green,
-      'city': Colors.orange,
-      'cultural': Colors.purple,
-      'nature': Colors.teal,
-    };
+    final dbCats = Provider.of<LocationProvider>(context, listen: false).categories;
+    
+    // Tạo bảng băm màu ổn định (tùy chọn)
+    final colors = [Colors.blue, Colors.green, Colors.orange, Colors.purple, Colors.teal, Colors.red, Colors.cyan];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -181,9 +173,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
-              children: categories.entries.map((entry) {
+              children: categories.entries.toList().asMap().entries.map((mappedEntry) {
+                final idx = mappedEntry.key;
+                final entry = mappedEntry.value;
                 final total = (_stats!['locations']['total'] as int);
                 final percent = total > 0 ? (entry.value as int) / total : 0.0;
+                
+                final dbCat = dbCats.where((c) => c.slug == entry.key).firstOrNull;
+                final catName = dbCat?.name ?? entry.key;
+                
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 6),
                   child: Row(
@@ -191,7 +189,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       SizedBox(
                         width: 80,
                         child: Text(
-                          categoryNames[entry.key] ?? entry.key,
+                          catName,
                           style: const TextStyle(fontWeight: FontWeight.w500),
                         ),
                       ),
@@ -200,7 +198,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           value: percent,
                           backgroundColor: Colors.grey[200],
                           valueColor: AlwaysStoppedAnimation(
-                            categoryColors[entry.key] ?? AppTheme.primaryColor,
+                            colors[idx % colors.length],
                           ),
                           minHeight: 8,
                           borderRadius: BorderRadius.circular(4),

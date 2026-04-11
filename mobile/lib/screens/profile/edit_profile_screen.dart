@@ -76,15 +76,31 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     try {
       final response = await _apiService.uploadAvatar(image.path);
       if (response.statusCode == 200 && mounted) {
+        // Refresh lại profile từ user-service để có avatar_url mới
         await Provider.of<AuthProvider>(context, listen: false).getCurrentUser();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Đã cập nhật ảnh đại diện!'),
+              backgroundColor: AppTheme.successColor,
+            ),
+          );
+        }
+      } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Đã cập nhật ảnh đại diện!'), backgroundColor: AppTheme.successColor),
+          SnackBar(
+            content: Text('Upload thất bại (HTTP ${response.statusCode}): ${response.data}'),
+            backgroundColor: AppTheme.errorColor,
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi upload ảnh: $e'), backgroundColor: AppTheme.errorColor),
+          SnackBar(
+            content: Text('Lỗi upload ảnh: $e'),
+            backgroundColor: AppTheme.errorColor,
+          ),
         );
       }
     } finally {

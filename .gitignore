@@ -1,0 +1,13 @@
+# Environment variables (sensitive config - API keys, DB passwords, IPs)
+.env
+*.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Docker
+*.log

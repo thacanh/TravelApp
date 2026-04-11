@@ -87,27 +87,17 @@ class HomeContent extends StatefulWidget {
 }
 
 class _HomeContentState extends State<HomeContent> {
-  // Map màu/icon fallback theo slug
-  final Map<String, IconData> _catIcons = {
-    'beach': Icons.beach_access,
-    'mountain': Icons.terrain,
-    'city': Icons.location_city,
-    'cultural': Icons.account_balance,
-    'nature': Icons.nature,
-    'camping': Icons.outdoor_grill,
-    'historical': Icons.museum,
-    'food': Icons.restaurant,
-  };
-  final Map<String, List<Color>> _catColors = {
-    'beach': [const Color(0xFF00BCD4), const Color(0xFF26C6DA)],
-    'mountain': [const Color(0xFF4CAF50), const Color(0xFF66BB6A)],
-    'city': [const Color(0xFFFF9800), const Color(0xFFFFB74D)],
-    'cultural': [const Color(0xFF9C27B0), const Color(0xFFBA68C8)],
-    'nature': [const Color(0xFF2E7D32), const Color(0xFF81C784)],
-    'camping': [const Color(0xFF795548), const Color(0xFFA1887F)],
-    'historical': [const Color(0xFF607D8B), const Color(0xFF90A4AE)],
-    'food': [const Color(0xFFE91E63), const Color(0xFFF48FB1)],
-  };
+  // Bảng phối màu ngẫu nhiên nhưng ổn định (dựa trên thứ tự index của danh mục DB)
+  final List<List<Color>> _availableGradients = [
+    [const Color(0xFF00BCD4), const Color(0xFF26C6DA)],
+    [const Color(0xFF4CAF50), const Color(0xFF66BB6A)],
+    [const Color(0xFFFF9800), const Color(0xFFFFB74D)],
+    [const Color(0xFF9C27B0), const Color(0xFFBA68C8)],
+    [const Color(0xFFE91E63), const Color(0xFFF48FB1)],
+    [const Color(0xFF6C63FF), const Color(0xFF8C85FF)],
+    [const Color(0xFF009688), const Color(0xFF4DB6AC)],
+    [const Color(0xFF607D8B), const Color(0xFF90A4AE)],
+  ];
 
   @override
   void initState() {
@@ -260,38 +250,28 @@ class _HomeContentState extends State<HomeContent> {
                     const Text('Danh mục', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 14),
                     SizedBox(
-                      height: 88,
+                      height: 44,
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
                         itemCount: cats.length,
                         separatorBuilder: (_, __) => const SizedBox(width: 12),
                         itemBuilder: (context, index) {
                           final cat = cats[index];
-                          final gradient = _catColors[cat.slug] ?? [AppTheme.primaryColor, AppTheme.secondaryColor];
+                          final gradient = _availableGradients[index % _availableGradients.length];
                           return GestureDetector(
                             onTap: () => Navigator.pushNamed(context, AppRoutes.locationList),
-                            child: Column(
-                              children: [
-                                Container(
-                                  width: 58,
-                                  height: 58,
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(colors: [gradient[0].withAlpha(25), gradient[1].withAlpha(25)]),
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(color: gradient[0].withAlpha(50)),
-                                  ),
-                                  child: Icon(
-                                    _catIcons[cat.slug] ?? Icons.place,
-                                    color: gradient[0],
-                                    size: 26,
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  cat.name,
-                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-                                ),
-                              ],
+                            child: Container(
+                              alignment: Alignment.center,
+                              padding: const EdgeInsets.symmetric(horizontal: 22),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(colors: gradient),
+                                borderRadius: BorderRadius.circular(22),
+                                boxShadow: [BoxShadow(color: gradient[0].withAlpha(60), blurRadius: 8, offset: const Offset(0, 4))],
+                              ),
+                              child: Text(
+                                cat.name,
+                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white),
+                              ),
                             ),
                           );
                         },

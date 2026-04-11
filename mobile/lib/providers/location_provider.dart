@@ -23,6 +23,7 @@ class LocationProvider with ChangeNotifier {
     String? city,
     String? search,
     double? minRating,
+    bool forceRefresh = false, // bỏ qua cache nếu cần reload ngay
   }) async {
     _isLoading = true;
     _errorMessage = null;

@@ -3,7 +3,7 @@ from typing import Optional, List
 from datetime import datetime
 from fastapi import FastAPI, Depends, HTTPException, Query, Header
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, Float, Text, JSON, ForeignKey, func
+from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, Float, Text, JSON, ForeignKey, func, desc
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from pydantic import BaseModel
@@ -33,10 +33,21 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow)
 
+class Category(Base):
+    __tablename__ = "categories"
+    id = Column(Integer, primary_key=True)
+    slug = Column(String(50), unique=True)
+    name = Column(String(100))
+
+class LocationCategory(Base):
+    __tablename__ = "location_categories"
+    location_id = Column(Integer, ForeignKey("locations.id", ondelete="CASCADE"), primary_key=True)
+    category_id = Column(Integer, ForeignKey("categories.id", ondelete="CASCADE"), primary_key=True)
+
 class Location(Base):
     __tablename__ = "locations"
     id = Column(Integer, primary_key=True)
-    category = Column(String(50))
+    name = Column(String(255), nullable=True)
 
 class Review(Base):
     __tablename__ = "reviews"
@@ -45,12 +56,20 @@ class Review(Base):
     location_id = Column(Integer, ForeignKey("locations.id"))
     rating = Column(Float)
     comment = Column(Text)
+    photos = Column(JSON, default=list)        # ← ảnh đính kèm
+    user_name = Column(String(100), nullable=True)   # ← tên user cache
+    user_email = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class Itinerary(Base):
     __tablename__ = "itineraries"
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer)
+
+class Favorite(Base):
+    __tablename__ = "favorites"
+    user_id = Column(Integer, primary_key=True)
+    location_id = Column(Integer, primary_key=True)
 
 def get_db():
     db = SessionLocal()
@@ -76,9 +95,6 @@ class UserResponse(BaseModel):
 
 app = FastAPI(title="TRAWiMe Admin Service", version="2.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
-# Admin service reads from shared DB — không tạo bảng riêng, chỉ dùng Base của các service khác
-# Nhưng vẫn gọi create_all để các bảng stub (User, Location, Review, Itinerary) được đảm bảo
-Base.metadata.create_all(bind=engine)
 
 @app.get("/health")
 def health(): return {"status": "healthy", "service": "admin-service"}
@@ -108,12 +124,33 @@ def toggle_user(user_id: int, current: CurrentUser = Depends(get_admin_user), db
 
 # ── Content Moderation ──────────────────────────────────────────────────────────
 @app.get("/api/admin/reviews")
-def list_reviews(skip: int = Query(0, ge=0), limit: int = Query(20, ge=1, le=100),
-                 current: CurrentUser = Depends(get_admin_user), db: Session = Depends(get_db)):
-    reviews = db.query(Review).order_by(Review.created_at.desc()).offset(skip).limit(limit).all()
-    return [{"id": r.id, "user_id": r.user_id, "location_id": r.location_id,
-             "rating": r.rating, "comment": r.comment,
-             "created_at": r.created_at.isoformat() if r.created_at else None} for r in reviews]
+def list_reviews(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=500),
+    current: CurrentUser = Depends(get_admin_user),
+    db: Session = Depends(get_db),
+):
+    rows = (
+        db.query(Review, Location.name.label("location_name"))
+        .outerjoin(Location, Review.location_id == Location.id)
+        .order_by(Review.created_at.desc())
+        .offset(skip).limit(limit)
+        .all()
+    )
+    return [
+        {
+            "id": r.id,
+            "user_id": r.user_id,
+            "user_name": r.user_name or f"User #{r.user_id}",
+            "location_id": r.location_id,
+            "location_name": loc_name or f"Địa điểm #{r.location_id}",
+            "rating": r.rating,
+            "comment": r.comment,
+            "photos": r.photos or [],
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+        }
+        for r, loc_name in rows
+    ]
 
 @app.delete("/api/admin/reviews/{review_id}", status_code=204)
 async def delete_review(review_id: int, current: CurrentUser = Depends(get_admin_user), db: Session = Depends(get_db)):
@@ -136,10 +173,23 @@ def get_stats(current: CurrentUser = Depends(get_admin_user), db: Session = Depe
     total_reviews = db.query(func.count(Review.id)).scalar()
     total_itineraries = db.query(func.count(Itinerary.id)).scalar()
     avg_rating = db.query(func.avg(Review.rating)).scalar()
-    category_stats = db.query(Location.category, func.count(Location.id)).group_by(Location.category).all()
+    # Category stats via N-N join
+    category_stats = db.query(
+        Category.slug, func.count(LocationCategory.location_id)
+    ).join(LocationCategory, Category.id == LocationCategory.category_id) \
+     .group_by(Category.slug).all()
+
+    top_favorite_locations = db.query(
+        Location.id, func.count(Favorite.location_id).label("favorite_count")
+    ).join(Favorite, Location.id == Favorite.location_id).group_by(Location.id).order_by(desc("favorite_count")).limit(5).all()
+
     return {
         "users": {"total": total_users, "active": active_users, "inactive": total_users - active_users},
-        "locations": {"total": total_locations, "by_category": {cat: cnt for cat, cnt in category_stats}},
+        "locations": {
+            "total": total_locations,
+            "by_category": {slug: cnt for slug, cnt in category_stats},
+            "top_favorites": [{"location_id": l_id, "count": cnt} for l_id, cnt in top_favorite_locations]
+        },
         "reviews": {"total": total_reviews, "average_rating": round(float(avg_rating), 2) if avg_rating else 0},
         "itineraries": {"total": total_itineraries},
     }

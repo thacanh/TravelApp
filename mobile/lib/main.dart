@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
+import 'config/app_config.dart';
 import 'config/theme.dart';
 import 'config/routes.dart';
 import 'providers/auth_provider.dart';
@@ -7,7 +9,10 @@ import 'providers/location_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/home/home_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Load .env — chỉ cần sửa file .env để đổi URL/config
+  await dotenv.load(fileName: '.env');
   runApp(const MyApp());
 }
 
@@ -22,7 +27,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => LocationProvider()),
       ],
       child: MaterialApp(
-        title: 'TRAWIME - Ứng dụng Du lịch',
+        title: '${AppConfig.appName} - Ứng dụng Du lịch',
         theme: AppTheme.lightTheme,
         debugShowCheckedModeBanner: false,
         home: const SplashWrapper(),

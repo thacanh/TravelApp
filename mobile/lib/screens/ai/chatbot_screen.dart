@@ -121,7 +121,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('TRAWiMe AI', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                const Text('TRAWIME AI', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 Text(
                   _isLoading ? 'Đang suy nghĩ...' : 'Sẵn sàng hỗ trợ',
                   style: TextStyle(fontSize: 11, color: _isLoading ? const Color(0xFF6C63FF) : Colors.grey[500]),

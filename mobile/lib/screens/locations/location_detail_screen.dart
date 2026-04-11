@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
+import 'package:lucide_icons/lucide_icons.dart';
+import 'package:provider/provider.dart';
 import '../../config/theme.dart';
 import '../../config/routes.dart';
 import '../../models/location.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/location_provider.dart';
 import '../../services/api_service.dart';
 
 class LocationDetailScreen extends StatefulWidget {
@@ -18,6 +22,7 @@ class _LocationDetailScreenState extends State<LocationDetailScreen> {
   final ApiService _apiService = ApiService();
   List<dynamic> _reviews = [];
   bool _isLoadingReviews = true;
+  bool _isFavorite = false;
   bool _initialized = false;
 
   late Location location;
@@ -29,6 +34,37 @@ class _LocationDetailScreenState extends State<LocationDetailScreen> {
     if (!_initialized) {
       _initialized = true;
       _loadReviews();
+      _checkFavorite();
+    }
+  }
+
+  Future<void> _checkFavorite() async {
+    try {
+      final res = await _apiService.getFavorites();
+      if (res.statusCode == 200) {
+        final List<dynamic> favIds = res.data;
+        if (mounted) {
+          setState(() {
+            _isFavorite = favIds.contains(location.id);
+          });
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _toggleFavorite() async {
+    final originalState = _isFavorite;
+    setState(() => _isFavorite = !_isFavorite);
+    
+    try {
+      if (_isFavorite) {
+        await _apiService.addFavorite(location.id);
+      } else {
+        await _apiService.removeFavorite(location.id);
+      }
+    } catch (_) {
+      // Revert if failed
+      if (mounted) setState(() => _isFavorite = originalState);
     }
   }
 
@@ -80,6 +116,59 @@ class _LocationDetailScreenState extends State<LocationDetailScreen> {
     }
   }
 
+  Future<void> _confirmDelete(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Xóa địa điểm?', style: TextStyle(fontWeight: FontWeight.w700)),
+        content: Text(
+          'Bạn có chắc muốn xóa "${location.name}" không?\nHành động này không thể hoàn tác.',
+          style: const TextStyle(color: AppTheme.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.errorColor,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Xóa'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      final res = await _apiService.deleteLocation(location.id);
+      if ((res.statusCode ?? 0) < 300 && mounted) {
+        await context.read<LocationProvider>().fetchLocations(forceRefresh: true);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Đã xóa "${location.name}"'),
+              backgroundColor: AppTheme.successColor,
+            ),
+          );
+          Navigator.pop(context); // trở về list
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi xóa: $e'), backgroundColor: AppTheme.errorColor),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -104,6 +193,64 @@ class _LocationDetailScreenState extends State<LocationDetailScreen> {
                 ),
               ),
             ),
+            actions: [
+              // ─── Admin actions ───
+              Consumer<AuthProvider>(
+                builder: (_, auth, __) {
+                  if (!auth.isAdmin) return const SizedBox.shrink();
+                  return Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Edit button
+                      _AdminActionBtn(
+                        icon: LucideIcons.pencil,
+                        color: Colors.white,
+                        tooltip: 'Chỉnh sửa',
+                        onTap: () async {
+                          final result = await Navigator.pushNamed(
+                            context,
+                            AppRoutes.adminLocationForm,
+                            arguments: location.toJson(),
+                          );
+                          if (result == true && context.mounted) {
+                            // Reload provider và pop về list
+                            await context.read<LocationProvider>().fetchLocations(forceRefresh: true);
+                            if (context.mounted) Navigator.pop(context);
+                          }
+                        },
+                      ),
+                      const SizedBox(width: 6),
+                      // Delete button
+                      _AdminActionBtn(
+                        icon: LucideIcons.trash2,
+                        color: Colors.redAccent,
+                        tooltip: 'Xóa',
+                        onTap: () => _confirmDelete(context),
+                      ),
+                      const SizedBox(width: 4),
+                    ],
+                  );
+                },
+              ),
+              // Favorite button
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black.withAlpha(50),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: IconButton(
+                    icon: Icon(
+                      _isFavorite ? Icons.favorite : Icons.favorite_border,
+                      color: _isFavorite ? Colors.redAccent : Colors.white,
+                      size: 20,
+                    ),
+                    onPressed: _toggleFavorite,
+                  ),
+                ),
+              ),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               background: location.images.isNotEmpty
                   ? CarouselSlider(
@@ -463,5 +610,49 @@ class _ReviewCard extends StatelessWidget {
     } catch (_) {
       return '';
     }
+  }
+}
+
+/// Button nhỏ cho admin trong SliverAppBar với nền mờ
+class _AdminActionBtn extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  const _AdminActionBtn({
+    required this.icon,
+    required this.color,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.black.withAlpha(55),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: color, size: 16),
+              const SizedBox(width: 4),
+              Text(
+                tooltip,
+                style: TextStyle(color: color, fontSize: 12.5, fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

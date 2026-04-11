@@ -42,6 +42,9 @@ services:
       - "8002:8002"
     environment:
       - DATABASE_URL=mysql+pymysql://root:220104@host.docker.internal:3306/trawime_db?charset=utf8mb4
+      - BASE_URL=http://192.168.100.222:8000
+    volumes:
+      - user_service_uploads:/app/uploads
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
@@ -67,7 +70,9 @@ services:
       - DATABASE_URL=mysql+pymysql://root:220104@host.docker.internal:3306/trawime_db?charset=utf8mb4
       - LOCATION_SERVICE_URL=http://location-service:8003
       - USER_SERVICE_URL=http://user-service:8002
-      - BASE_URL=http://192.168.100.222:8004
+      - BASE_URL=http://192.168.100.222:8000
+    volumes:
+      - review_service_uploads:/app/uploads
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
@@ -105,4 +110,7 @@ services:
 
 volumes:
   location_media:
+  user_service_uploads:
+    driver: local
+  review_service_uploads:
     driver: local

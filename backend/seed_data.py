@@ -20,8 +20,8 @@ import pymysql
 # ─── Config ───────────────────────────────────────────────────────────────────
 BASE_URL       = "http://192.168.100.222:8000"
 ADMIN_EMAIL    = "admin@trawime.com"
-ADMIN_PASSWORD = "Admin@123"
-ADMIN_NAME     = "Admin TRAWiMe"
+ADMIN_PASSWORD = "admin123"
+ADMIN_NAME     = "Admin TRAWIME"
 
 # Kết nối DB trực tiếp để set role=admin (auth-service không có endpoint đổi role)
 DB_HOST = "192.168.100.222"
@@ -48,7 +48,7 @@ LOCATIONS = [
     {
         "name": "Vịnh Hạ Long",
         "description": "Vịnh Hạ Long là một trong những kỳ quan thiên nhiên thế giới, nổi tiếng với hàng nghìn hòn đảo đá vôi nổi trên vùng nước xanh ngọc bích. Đây là điểm đến lý tưởng để du thuyền, tắm biển, khám phá hang động và trải nghiệm văn hóa ngư dân địa phương.",
-        "category": "nature",
+        "category_slugs": ["nature", "island"],
         "city": "Quảng Ninh",
         "address": "Vịnh Hạ Long, Quảng Ninh, Việt Nam",
         "latitude": 20.9101,
@@ -57,7 +57,7 @@ LOCATIONS = [
     {
         "name": "Phố Cổ Hội An",
         "description": "Hội An là đô thị cổ được UNESCO công nhận là Di sản Văn hóa Thế giới. Thành phố nhỏ bên bờ sông Thu Bồn nổi tiếng với những ngôi nhà cổ kính, đèn lồng rực rỡ và ẩm thực đặc sắc như Cao Lầu, Mì Quảng, Bánh Mì Hội An.",
-        "category": "cultural",
+        "category_slugs": ["cultural", "historical", "food"],
         "city": "Hội An",
         "address": "Phố Cổ Hội An, Quảng Nam, Việt Nam",
         "latitude": 15.8801,
@@ -66,7 +66,7 @@ LOCATIONS = [
     {
         "name": "Bãi Sao Phú Quốc",
         "description": "Bãi Sao là một trong những bãi biển đẹp nhất Việt Nam, tọa lạc ở phía đông nam đảo Phú Quốc. Bãi biển có cát trắng mịn, nước trong xanh, lý tưởng cho lặn ngắm san hô, kayaking và nghỉ dưỡng cao cấp.",
-        "category": "beach",
+        "category_slugs": ["beach", "island"],
         "city": "Phú Quốc",
         "address": "Bãi Sao, An Thới, Phú Quốc, Kiên Giang",
         "latitude": 10.0128,
@@ -74,8 +74,8 @@ LOCATIONS = [
     },
     {
         "name": "Đà Lạt",
-        "description": "Đà Lạt được mệnh danh là 'Thành phố Ngàn hoa' và 'Paris của Đông Dương'. Khí hậu mát mẻ quanh năm, những đồi thông xanh mướt, hồ thơ mộng và kiến trúc Pháp cổ kính tạo nên không khí lãng mạn và dễ chịu. Đây là điểm đến yêu thích cho tuần trăng mật và du lịch nghỉ dưỡng.",
-        "category": "city",
+        "description": "Đà Lạt được mệnh danh là 'Thành phố Ngàn hoa' và 'Paris của Đông Dương'. Khí hậu mát mẻ quanh năm, những đồi thông xanh mướt, hồ thơ mộng và kiến trúc Pháp cổ kính tạo nên không khí lãng mạn và dễ chịu.",
+        "category_slugs": ["city", "nature", "mountain"],
         "city": "Đà Lạt",
         "address": "Thành phố Đà Lạt, Lâm Đồng, Việt Nam",
         "latitude": 11.9404,
@@ -83,8 +83,8 @@ LOCATIONS = [
     },
     {
         "name": "Thác Bản Giốc",
-        "description": "Thác Bản Giốc là thác nước tự nhiên lớn nhất Đông Nam Á và nằm trên đường biên giới Việt Nam - Trung Quốc. Thác có chiều rộng 300m và cao 53m, tạo nên khung cảnh hùng vĩ giữa núi rừng Cao Bằng xanh tươi. Mùa nước lớn từ tháng 8 đến tháng 10 là thời điểm đẹp nhất.",
-        "category": "waterfall",
+        "description": "Thác Bản Giốc là thác nước tự nhiên lớn nhất Đông Nam Á và nằm trên đường biên giới Việt Nam - Trung Quốc. Thác có chiều rộng 300m và cao 53m, tạo nên khung cảnh hùng vĩ giữa núi rừng Cao Bằng xanh tươi.",
+        "category_slugs": ["waterfall", "nature"],
         "city": "Cao Bằng",
         "address": "Xã Đàm Thủy, Trùng Khánh, Cao Bằng",
         "latitude": 22.8562,
@@ -93,7 +93,7 @@ LOCATIONS = [
     {
         "name": "Hoàng Thành Thăng Long",
         "description": "Hoàng Thành Thăng Long là quần thể di tích lịch sử nằm tại trung tâm Hà Nội, là nơi ghi dấu lịch sử hơn 1000 năm trị vì của các triều đại phong kiến Việt Nam từ thời nhà Lý đến nhà Nguyễn. Được UNESCO công nhận là Di sản Văn hóa Thế giới năm 2010.",
-        "category": "historical",
+        "category_slugs": ["historical", "cultural"],
         "city": "Hà Nội",
         "address": "19C Hoàng Diệu, Ba Đình, Hà Nội",
         "latitude": 21.0358,
@@ -101,8 +101,8 @@ LOCATIONS = [
     },
     {
         "name": "Núi Fansipan",
-        "description": "Fansipan là ngọn núi cao nhất Đông Dương với độ cao 3143 mét so với mực nước biển, được mệnh danh là 'Nóc nhà Đông Dương'. Du khách có thể lên đỉnh bằng hệ thống cáp treo hiện đại hoặc trekking 2-3 ngày qua những cánh rừng nguyên sinh đa dạng sinh học.",
-        "category": "mountain",
+        "description": "Fansipan là ngọn núi cao nhất Đông Dương với độ cao 3143 mét so với mực nước biển, được mệnh danh là 'Nóc nhà Đông Dương'. Du khách có thể lên đỉnh bằng cáp treo hiện đại hoặc trekking 2-3 ngày qua rừng nguyên sinh.",
+        "category_slugs": ["mountain", "nature"],
         "city": "Sapa",
         "address": "Dãy Hoàng Liên Sơn, Sa Pa, Lào Cai",
         "latitude": 22.3030,
@@ -110,8 +110,8 @@ LOCATIONS = [
     },
     {
         "name": "Phố Đi Bộ Hồ Gươm",
-        "description": "Khu vực Hồ Hoàn Kiếm và phố đi bộ Đinh Tiên Hoàng là trái tim của Hà Nội. Nơi đây nổi tiếng với Tháp Rùa, cầu Thê Húc, đền Ngọc Sơn và không khí sôi động cuối tuần. Phố đi bộ mở cửa từ tối thứ 6 đến tối chủ nhật hằng tuần.",
-        "category": "city",
+        "description": "Khu vực Hồ Hoàn Kiếm và phố đi bộ Đinh Tiên Hoàng là trái tim của Hà Nội. Nơi đây nổi tiếng với Tháp Rùa, cầu Thê Húc, đền Ngọc Sơn và không khí sôi động cuối tuần.",
+        "category_slugs": ["city", "cultural", "historical"],
         "city": "Hà Nội",
         "address": "Hồ Hoàn Kiếm, Hoàn Kiếm, Hà Nội",
         "latitude": 21.0285,
@@ -119,8 +119,8 @@ LOCATIONS = [
     },
     {
         "name": "Chợ Bến Thành",
-        "description": "Chợ Bến Thành là biểu tượng văn hóa và ẩm thực của Thành phố Hồ Chí Minh. Nổi tiếng với đồ lưu niệm, vải vóc và đặc sản miền Nam, chợ còn là thiên đường ẩm thực với hàng trăm gian hàng cơm tấm, bún thịt nướng, hủ tiếu và các món ăn địa phương đặc sắc.",
-        "category": "food",
+        "description": "Chợ Bến Thành là biểu tượng văn hóa và ẩm thực của Thành phố Hồ Chí Minh, nổi tiếng với đồ lưu niệm, vải vóc và đặc sản miền Nam.",
+        "category_slugs": ["food", "cultural", "city"],
         "city": "Hồ Chí Minh",
         "address": "Phạm Ngũ Lão, Quận 1, Thành phố Hồ Chí Minh",
         "latitude": 10.7722,
@@ -128,8 +128,8 @@ LOCATIONS = [
     },
     {
         "name": "Đảo Cô Tô",
-        "description": "Cô Tô là quần đảo ngoài khơi tỉnh Quảng Ninh, nổi tiếng với bãi biển hoang sơ, nước trong xanh và hải sản tươi ngon. Đây là điểm đến lý tưởng cho những ai muốn tránh xa đám đông để tận hưởng không khí yên bình của biển đảo và khám phá cuộc sống ngư dân địa phương.",
-        "category": "island",
+        "description": "Cô Tô là quần đảo ngoài khơi tỉnh Quảng Ninh, nổi tiếng với bãi biển hoang sơ, nước trong xanh và hải sản tươi ngon.",
+        "category_slugs": ["island", "beach", "nature"],
         "city": "Quảng Ninh",
         "address": "Huyện Cô Tô, Quảng Ninh",
         "latitude": 20.9833,
@@ -137,8 +137,8 @@ LOCATIONS = [
     },
     {
         "name": "Làng Cổ Đường Lâm",
-        "description": "Đường Lâm là ngôi làng cổ đầu tiên được Nhà nước công nhận là Di tích Lịch sử Văn hóa Quốc gia. Nằm cách Hà Nội 50km, làng còn lưu giữ nhiều ngôi nhà đá ong hàng trăm năm tuổi, đình làng cổ kính và là quê hương của hai vị vua Việt Nam - Phùng Hưng và Ngô Quyền.",
-        "category": "historical",
+        "description": "Đường Lâm là ngôi làng cổ đầu tiên được Nhà nước công nhận là Di tích Lịch sử Văn hóa Quốc gia. Nằm cách Hà Nội 50km, làng còn lưu giữ nhiều ngôi nhà đá ong hàng trăm năm tuổi.",
+        "category_slugs": ["historical", "cultural"],
         "city": "Hà Nội",
         "address": "Đường Lâm, Sơn Tây, Hà Nội",
         "latitude": 21.1406,
@@ -146,8 +146,8 @@ LOCATIONS = [
     },
     {
         "name": "Mũi Né",
-        "description": "Mũi Né là điểm đến nổi tiếng với những đồi cát vàng và cát đỏ tuyệt đẹp, bãi biển dài và làng chài rực rỡ. Nơi đây còn được mệnh danh là thủ đô lướt sóng, lướt ván diều của Việt Nam nhờ gió mạnh và thuận lợi. Suối Tiên và bãi đá Ông Địa là những điểm check-in ưa thích.",
-        "category": "beach",
+        "description": "Mũi Né nổi tiếng với những đồi cát vàng và cát đỏ, bãi biển dài, là thủ đô lướt sóng và lướt ván diều của Việt Nam.",
+        "category_slugs": ["beach", "nature"],
         "city": "Phan Thiết",
         "address": "Thị trấn Mũi Né, Phan Thiết, Bình Thuận",
         "latitude": 10.9438,
@@ -155,8 +155,8 @@ LOCATIONS = [
     },
     {
         "name": "Tháp Chàm Mỹ Sơn",
-        "description": "Thánh địa Mỹ Sơn là quần thể đền tháp Chăm Pa cổ kính, được UNESCO công nhận là Di sản Văn hóa Thế giới năm 1999. Nằm trong thung lũng bao quanh bởi rừng núi hùng vĩ tại Quảng Nam, Mỹ Sơn là minh chứng cho nền văn minh Chăm Pa rực rỡ từ thế kỷ 4 đến thế kỷ 13.",
-        "category": "cultural",
+        "description": "Thánh địa Mỹ Sơn là quần thể đền tháp Chăm Pa cổ kính, được UNESCO công nhận là Di sản Văn hóa Thế giới năm 1999.",
+        "category_slugs": ["cultural", "historical"],
         "city": "Quảng Nam",
         "address": "Xã Duy Phú, Huyện Duy Xuyên, Quảng Nam",
         "latitude": 15.7667,
@@ -164,8 +164,8 @@ LOCATIONS = [
     },
     {
         "name": "Vườn Quốc Gia Phong Nha - Kẻ Bàng",
-        "description": "Phong Nha - Kẻ Bàng là Vườn Quốc gia và Di sản Thiên nhiên Thế giới UNESCO, nổi tiếng với hệ thống hang động kỳ vĩ nhất thế giới. Hang Sơn Đoòng - hang động lớn nhất thế giới, hang Phong Nha và động Thiên Đường là những điểm khám phá không thể bỏ qua.",
-        "category": "nature",
+        "description": "Phong Nha - Kẻ Bàng là Di sản Thiên nhiên Thế giới UNESCO, nổi tiếng với hệ thống hang động kỳ vĩ nhất thế giới trong đó có Hang Sơn Đoòng - hang động lớn nhất thế giới.",
+        "category_slugs": ["nature", "mountain"],
         "city": "Quảng Bình",
         "address": "Huyện Bố Trạch, Quảng Bình",
         "latitude": 17.5411,
@@ -173,8 +173,8 @@ LOCATIONS = [
     },
     {
         "name": "Núi Bà Đen",
-        "description": "Núi Bà Đen là ngọn núi cao nhất Nam Bộ với độ cao 986 mét, nằm ở tây bắc tỉnh Tây Ninh. Đây là điểm hành hương tâm linh nổi tiếng với ngôi chùa trên đỉnh núi và hệ thống cáp treo hiện đại. Du khách còn có thể cắm trại và ngắm toàn cảnh đồng bằng sông Cửu Long từ trên cao.",
-        "category": "mountain",
+        "description": "Núi Bà Đen là ngọn núi cao nhất Nam Bộ với độ cao 986 mét, là điểm hành hương tâm linh nổi tiếng với ngôi chùa trên đỉnh và hệ thống cáp treo hiện đại.",
+        "category_slugs": ["mountain", "cultural"],
         "city": "Tây Ninh",
         "address": "Núi Bà Đen, Thành phố Tây Ninh, Tây Ninh",
         "latitude": 11.3982,
@@ -220,7 +220,7 @@ def _login(email, password):
     resp = _post("/api/auth/login", {"username": email, "password": password}, as_form=True)
     if resp.status_code == 200:
         return resp.json()["access_token"]
-    print(f"  ✗ Đăng nhập thất bại ({email}): {resp.text}")
+    print(f"  [-] Đăng nhập thất bại ({email}): {resp.text}")
     return None
 
 # ─── Steps ────────────────────────────────────────────────────────────────────
@@ -232,7 +232,7 @@ def step_create_admin():
     # Thử đăng nhập trước
     token = _login(ADMIN_EMAIL, ADMIN_PASSWORD)
     if token:
-        print(f"  ✓ Admin đã có: {ADMIN_EMAIL}")
+        print(f"  [+] Admin đã có: {ADMIN_EMAIL}")
         return
 
     # Đăng ký tài khoản mới
@@ -242,7 +242,7 @@ def step_create_admin():
         "full_name": ADMIN_NAME,
     })
     if resp.status_code not in (200, 201):
-        print(f"  ✗ Không thể đăng ký admin: {resp.text}")
+        print(f"  [-] Không thể đăng ký admin: {resp.text}")
         print("  → Tạo thủ công qua MySQL hoặc kiểm tra backend.")
         sys.exit(1)
 
@@ -254,18 +254,18 @@ def step_create_admin():
             cur.execute("UPDATE users SET role='admin' WHERE email=%s", (ADMIN_EMAIL,))
         conn.commit()
         conn.close()
-        print(f"  ✓ Tạo admin thành công: {ADMIN_EMAIL}")
+        print(f"  [+] Tạo admin thành công: {ADMIN_EMAIL}")
     except Exception as e:
-        print(f"  ✗ Không thể set role=admin qua DB: {e}")
+        print(f"  [-] Không thể set role=admin qua DB: {e}")
         print("  → Tự chạy: UPDATE users SET role='admin' WHERE email='admin@trawime.com';")
 
 def step_admin_token():
     print("\n[1/6] Đăng nhập admin...")
     token = _login(ADMIN_EMAIL, ADMIN_PASSWORD)
     if not token:
-        print("  ✗ Không thể đăng nhập admin. Kiểm tra lại email/password trong DATABASE.")
+        print("  [-] Không thể đăng nhập admin. Kiểm tra lại email/password trong DATABASE.")
         sys.exit(1)
-    print(f"  ✓ Đăng nhập thành công: {ADMIN_EMAIL}")
+    print(f"  [+] Đăng nhập thành công: {ADMIN_EMAIL}")
     return token
 
 def step_categories(admin_token):
@@ -284,10 +284,10 @@ def step_categories(admin_token):
             continue
         resp = _post("/api/categories", cat, admin_token)
         if resp.status_code in (200, 201):
-            print(f"  ✓ Tạo: {cat['name']}")
+            print(f"  [+] Tạo: {cat['name']}")
             created += 1
         else:
-            print(f"  ✗ Lỗi tạo {cat['slug']}: {resp.text}")
+            print(f"  [-] Lỗi tạo {cat['slug']}: {resp.text}")
     print(f"  → Tổng mới: {created} | Đã có: {len(existing)}")
     # Trả về map slug→id
     resp = _get("/api/categories", admin_token)
@@ -311,13 +311,31 @@ def step_locations(admin_token):
             if resp2.status_code == 200 and resp2.json():
                 location_ids.append(resp2.json()[0]["id"])
             continue
-        resp = _post("/api/locations", loc, admin_token)
+        # Gửi payload với categories_input (hỗ trợ tạo category mới nếu chưa có)
+        # Lấy name từ CATEGORIES dict
+        cat_map = {c["slug"]: c["name"] for c in CATEGORIES}
+        payload = {
+            "name": loc["name"],
+            "description": loc.get("description"),
+            "categories_input": [
+                {"slug": s, "name": cat_map.get(s, s)}
+                for s in loc.get("category_slugs", [])
+            ],
+            "city": loc["city"],
+            "address": loc.get("address"),
+            "country": loc.get("country", "Vietnam"),
+            "latitude": loc.get("latitude"),
+            "longitude": loc.get("longitude"),
+            "images": loc.get("images", []),
+        }
+        resp = _post("/api/locations", payload, admin_token)
         if resp.status_code in (200, 201):
             loc_id = resp.json().get("id")
             location_ids.append(loc_id)
-            print(f"  ✓ Tạo: {loc['name']} (id={loc_id})")
+            cats = loc.get("category_slugs", [])
+            print(f"  [+] Tạo: {loc['name']} (id={loc_id}, cats={cats})")
         else:
-            print(f"  ✗ Lỗi tạo {loc['name']}: {resp.text}")
+            print(f"  [-] Lỗi tạo {loc['name']}: {resp.text}")
         time.sleep(0.2)  # Gentle rate limit
     print(f"  → Tổng địa điểm: {len(location_ids)}")
     return location_ids
@@ -343,9 +361,9 @@ def step_users():
             token = _login(u["email"], u["password"])
             if token:
                 user_tokens.append(token)
-                print(f"  ✓ Tạo: {u['full_name']}")
+                print(f"  [+] Tạo: {u['full_name']}")
         else:
-            print(f"  ✗ Lỗi tạo {u['email']}: {resp.text}")
+            print(f"  [-] Lỗi tạo {u['email']}: {resp.text}")
     print(f"  → Tổng users: {len(user_tokens)}")
     return user_tokens
 
@@ -371,7 +389,7 @@ def step_reviews(user_tokens, location_ids):
                 # Có thể đã review rồi, im lặng
                 pass
             time.sleep(0.1)
-    print(f"  ✓ Tổng review tạo được: {total}")
+    print(f"  [+] Tổng review tạo được: {total}")
 
 def step_embeddings(admin_token):
     print("\n[6/6] Tạo embedding cho tất cả địa điểm...")
@@ -382,14 +400,14 @@ def step_embeddings(admin_token):
     )
     if resp.status_code == 200:
         data = resp.json()
-        print(f"  ✓ {data.get('message', 'Xong')}")
+        print(f"  [+] {data.get('message', 'Xong')}")
         if data.get("errors", 0) > 0:
             print(f"  ! {data['errors']} lỗi embedding (kiểm tra GEMINI_API_KEY)")
     elif resp.status_code == 503:
         print("  ! Gemini API không khả dụng — bỏ qua embedding.")
         print("    Thêm GEMINI_API_KEY vào .env và chạy lại để có AI gợi ý chính xác.")
     else:
-        print(f"  ✗ Lỗi embedding: {resp.status_code} — {resp.text[:200]}")
+        print(f"  [-] Lỗi embedding: {resp.status_code} — {resp.text[:200]}")
 
 # ─── Main ──────────────────────────────────────────────────────────────────────
 
@@ -402,9 +420,9 @@ def main():
     # Kiểm tra server còn sống không
     try:
         resp = requests.get(f"{BASE_URL}/health", timeout=5)
-        print(f"\n  Server: {'OK ✓' if resp.status_code == 200 else 'Lỗi ✗'}")
+        print(f"\n  Server: {'OK [+]' if resp.status_code == 200 else 'Lỗi [-]'}")
     except Exception as e:
-        print(f"\n  ✗ Không kết nối được server: {e}")
+        print(f"\n  [-] Không kết nối được server: {e}")
         print("  → Đảm bảo Docker đang chạy: docker compose up -d")
         sys.exit(1)
 

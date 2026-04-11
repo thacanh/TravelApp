@@ -33,13 +33,26 @@ Base = declarative_base()
 
 
 # ── Models ─────────────────────────────────────────────────────────────────────
+class Category(Base):
+    __tablename__ = "categories"
+    id = Column(Integer, primary_key=True)
+    slug = Column(String(50), unique=True)
+    name = Column(String(100))
+
+class LocationCategory(Base):
+    __tablename__ = "location_categories"
+    location_id = Column(Integer, ForeignKey("locations.id", ondelete="CASCADE"), primary_key=True)
+    category_id = Column(Integer, ForeignKey("categories.id", ondelete="CASCADE"), primary_key=True)
+
 class Location(Base):
     __tablename__ = "locations"
     id = Column(Integer, primary_key=True)
     name = Column(String(255)); description = Column(Text)
-    category = Column(String(50)); city = Column(String(100))
+    city = Column(String(100))
     images = Column(JSON, default=list)
     description_embedding = Column(JSON, nullable=True)
+    # Quan hệ N-N với Category
+    categories = relationship("Category", secondary="location_categories", lazy="selectin")
 
 class ChatSession(Base):
     __tablename__ = "chat_sessions"
@@ -58,8 +71,6 @@ class ChatMessage(Base):
     content = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     session = relationship("ChatSession", back_populates="messages")
-
-Base.metadata.create_all(bind=engine)
 
 def get_db():
     db = SessionLocal()
@@ -159,10 +170,12 @@ def _get_embedding(text: str) -> List[float]:
 
 def _embed_location(loc) -> List[float]:
     """Build a rich description for a location and embed it."""
+    # Dùng danh sách tên categories từ quan hệ N-N
+    cat_names = ", ".join([c.name for c in (loc.categories or [])]) or ""
     text = (
         f"{loc.name}. "
         f"Thành phố: {loc.city or ''}. "
-        f"Loại: {loc.category or ''}. "
+        f"Loại: {cat_names}. "
         f"{loc.description or ''}"
     )
     return _get_embedding(text)
@@ -281,7 +294,8 @@ async def get_recommendations(req: AIRecommendRequest, current: CurrentUser = De
 
     query = db.query(Location)
     if req.category:
-        query = query.filter(Location.category == req.category)
+        # Lọc theo category slug trong quan hệ N-N
+        query = query.filter(Location.categories.any(Category.slug == req.category))
     locations = query.all()
 
     if not locations:
@@ -294,7 +308,8 @@ async def get_recommendations(req: AIRecommendRequest, current: CurrentUser = De
         for score, loc in results:
             recommendations.append({
                 "location_id": loc.id, "name": loc.name,
-                "category": loc.category, "city": loc.city,
+                "categories": [{"slug": c.slug, "name": c.name} for c in (loc.categories or [])],
+                "city": loc.city,
                 "rating": 0,
                 "match_score": round(score, 4),
                 "reason": f"Độ tương đồng với yêu cầu: {round(score * 100, 1)}%",

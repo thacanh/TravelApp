@@ -4,247 +4,179 @@ import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../config/theme.dart';
+import '../../config/app_config.dart';
 
-/// Màn hình chọn tọa độ trên bản đồ.
-/// Trả về [LatLng] khi người dùng xác nhận, hoặc null nếu hủy.
+/// Màn hình chọn toạ độ từ bản đồ.
+/// Trả về Map<String, double> {'lat': ..., 'lng': ...} khi confirm.
 class MapPickerScreen extends StatefulWidget {
-  /// Tọa độ ban đầu (nếu đã có sẵn khi mở)
-  final LatLng? initialLatLng;
+  final double? initialLat;
+  final double? initialLng;
 
-  const MapPickerScreen({super.key, this.initialLatLng});
+  const MapPickerScreen({super.key, this.initialLat, this.initialLng});
 
   @override
   State<MapPickerScreen> createState() => _MapPickerScreenState();
 }
 
 class _MapPickerScreenState extends State<MapPickerScreen> {
-  final MapController _mapController = MapController();
-  LatLng? _picked;
-  bool _locating = false;
-
-  // Mặc định: Hà Nội
-  static const _defaultCenter = LatLng(21.0285, 105.8542);
+  late final MapController _mapController;
+  late LatLng _pickedPoint;
+  bool _hasLocation = false;
 
   @override
   void initState() {
     super.initState();
-    _picked = widget.initialLatLng;
+    _mapController = MapController();
+    _pickedPoint = LatLng(
+      widget.initialLat ?? AppConfig.defaultLatitude,
+      widget.initialLng ?? AppConfig.defaultLongitude,
+    );
+    if (widget.initialLat != null && widget.initialLng != null) {
+      _hasLocation = true;
+    }
+    _tryGetCurrentLocation();
   }
 
-  @override
-  void dispose() {
-    _mapController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _goToCurrentLocation() async {
-    setState(() => _locating = true);
+  Future<void> _tryGetCurrentLocation() async {
     try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        _showSnack('Vui lòng bật GPS trên thiết bị');
-        return;
-      }
-      LocationPermission perm = await Geolocator.checkPermission();
+      var perm = await Geolocator.checkPermission();
       if (perm == LocationPermission.denied) {
         perm = await Geolocator.requestPermission();
       }
-      if (perm == LocationPermission.deniedForever || perm == LocationPermission.denied) {
-        _showSnack('Ứng dụng chưa được cấp quyền vị trí');
-        return;
+      if (perm == LocationPermission.denied || perm == LocationPermission.deniedForever) return;
+
+      final pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.medium,
+        timeLimit: const Duration(seconds: 5),
+      );
+      if (mounted && !_hasLocation) {
+        setState(() {
+          _pickedPoint = LatLng(pos.latitude, pos.longitude);
+          _hasLocation = true;
+        });
+        _mapController.move(_pickedPoint, 13);
       }
-      final pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-      final latLng = LatLng(pos.latitude, pos.longitude);
-      setState(() => _picked = latLng);
-      _mapController.move(latLng, 15);
-    } catch (e) {
-      _showSnack('Không lấy được vị trí: $e');
-    } finally {
-      if (mounted) setState(() => _locating = false);
-    }
+    } catch (_) {}
   }
 
-  void _showSnack(String msg) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  void _onTap(TapPosition _, LatLng point) {
+    setState(() {
+      _pickedPoint = point;
+      _hasLocation = true;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final center = widget.initialLatLng ?? _defaultCenter;
-
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Chọn vị trí trên bản đồ'),
+        title: const Text('Chọn vị trí'),
         actions: [
-          if (_picked != null)
+          if (_hasLocation)
             TextButton.icon(
-              onPressed: () => Navigator.pop(context, _picked),
-              icon: const Icon(LucideIcons.check, size: 18, color: Colors.white),
-              label: const Text('Xác nhận', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+              onPressed: () => Navigator.pop(context, {
+                'lat': _pickedPoint.latitude,
+                'lng': _pickedPoint.longitude,
+              }),
+              icon: const Icon(LucideIcons.check, size: 18),
+              label: const Text('Xác nhận', style: TextStyle(fontWeight: FontWeight.w700)),
             ),
         ],
       ),
       body: Stack(
         children: [
-          // ── Map ──────────────────────────────────────────────────────
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
-              initialCenter: center,
-              initialZoom: 13,
-              onTap: (_, latLng) => setState(() => _picked = latLng),
+              initialCenter: _pickedPoint,
+              initialZoom: widget.initialLat != null ? 14 : AppConfig.defaultZoom,
+              onTap: _onTap,
             ),
             children: [
               TileLayer(
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.trawime.app',
+                userAgentPackageName: 'com.example.trawime',
               ),
-              if (_picked != null)
-                MarkerLayer(
-                  markers: [
-                    Marker(
-                      point: _picked!,
-                      width: 48,
-                      height: 56,
-                      child: Column(
-                        children: [
-                          Container(
-                            width: 36,
-                            height: 36,
-                            decoration: const BoxDecoration(
-                              color: AppTheme.primaryColor,
-                              shape: BoxShape.circle,
-                              boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 3))],
-                            ),
-                            child: const Icon(LucideIcons.mapPin, color: Colors.white, size: 20),
-                          ),
-                          CustomPaint(
-                            size: const Size(12, 8),
-                            painter: _TrianglePainter(AppTheme.primaryColor),
+              if (_hasLocation)
+                MarkerLayer(markers: [
+                  Marker(
+                    point: _pickedPoint,
+                    width: 44,
+                    height: 44,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryColor,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 3),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppTheme.primaryColor.withAlpha(80),
+                            blurRadius: 12,
+                            spreadRadius: 2,
                           ),
                         ],
                       ),
+                      child: const Icon(Icons.place, color: Colors.white, size: 22),
                     ),
-                  ],
-                ),
+                  ),
+                ]),
             ],
           ),
 
-          // ── Hint banner ──────────────────────────────────────────────
+          // Instruction banner
           Positioned(
-            top: 12,
-            left: 16,
-            right: 16,
+            top: 0,
+            left: 0,
+            right: 0,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: Colors.black.withAlpha(160),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Row(
-                children: [
-                  Icon(LucideIcons.hand, color: Colors.white70, size: 16),
-                  SizedBox(width: 8),
-                  Text('Nhấn vào bản đồ để đặt ghim vị trí', style: TextStyle(color: Colors.white, fontSize: 13)),
-                ],
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+              color: Colors.black.withAlpha(130),
+              child: const Text(
+                'Nhấn vào bản đồ để chọn vị trí',
+                style: TextStyle(color: Colors.white, fontSize: 13),
+                textAlign: TextAlign.center,
               ),
             ),
           ),
 
-          // ── Coordinates chip ─────────────────────────────────────────
-          if (_picked != null)
+          // Coordinate display
+          if (_hasLocation)
             Positioned(
-              bottom: 100,
+              bottom: 20,
               left: 16,
               right: 16,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: AppTheme.softShadow,
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: AppTheme.cardShadow,
                 ),
                 child: Row(
                   children: [
-                    const Icon(LucideIcons.locateFixed, color: AppTheme.primaryColor, size: 16),
-                    const SizedBox(width: 8),
+                    const Icon(LucideIcons.mapPin, size: 18, color: AppTheme.primaryColor),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'Vĩ độ: ${_picked!.latitude.toStringAsFixed(6)}\nKinh độ: ${_picked!.longitude.toStringAsFixed(6)}',
-                        style: const TextStyle(fontSize: 13, height: 1.5, fontWeight: FontWeight.w500),
+                        'Lat: ${_pickedPoint.latitude.toStringAsFixed(6)}\n'
+                        'Lng: ${_pickedPoint.longitude.toStringAsFixed(6)}',
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
                       ),
                     ),
-                    IconButton(
-                      icon: const Icon(LucideIcons.x, size: 16, color: Colors.grey),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      onPressed: () => setState(() => _picked = null),
-                      tooltip: 'Bỏ ghim',
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(context, {
+                        'lat': _pickedPoint.latitude,
+                        'lng': _pickedPoint.longitude,
+                      }),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      child: const Text('Dùng vị trí này', style: TextStyle(fontWeight: FontWeight.w600)),
                     ),
                   ],
-                ),
-              ),
-            ),
-
-          // ── My location button ───────────────────────────────────────
-          Positioned(
-            bottom: 24,
-            right: 16,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                FloatingActionButton.small(
-                  heroTag: 'zoom_in',
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.black87,
-                  onPressed: () {
-                    final zoom = _mapController.camera.zoom;
-                    _mapController.move(_mapController.camera.center, zoom + 1);
-                  },
-                  child: const Icon(Icons.add),
-                ),
-                const SizedBox(height: 8),
-                FloatingActionButton.small(
-                  heroTag: 'zoom_out',
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.black87,
-                  onPressed: () {
-                    final zoom = _mapController.camera.zoom;
-                    _mapController.move(_mapController.camera.center, zoom - 1);
-                  },
-                  child: const Icon(Icons.remove),
-                ),
-                const SizedBox(height: 8),
-                FloatingActionButton(
-                  heroTag: 'my_location',
-                  backgroundColor: AppTheme.primaryColor,
-                  onPressed: _locating ? null : _goToCurrentLocation,
-                  child: _locating
-                      ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                      : const Icon(Icons.my_location, color: Colors.white),
-                ),
-              ],
-            ),
-          ),
-
-          // ── Confirm bottom button ────────────────────────────────────
-          if (_picked != null)
-            Positioned(
-              bottom: 24,
-              left: 16,
-              right: 90,
-              child: SizedBox(
-                height: 50,
-                child: ElevatedButton.icon(
-                  onPressed: () => Navigator.pop(context, _picked),
-                  icon: const Icon(LucideIcons.check, size: 18),
-                  label: const Text('Dùng vị trí này', style: TextStyle(fontWeight: FontWeight.w600)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryColor,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
                 ),
               ),
             ),
@@ -252,24 +184,4 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
       ),
     );
   }
-}
-
-/// Tam giác nhỏ dưới pin marker
-class _TrianglePainter extends CustomPainter {
-  final Color color;
-  _TrianglePainter(this.color);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = color;
-    final path = Path()
-      ..moveTo(0, 0)
-      ..lineTo(size.width, 0)
-      ..lineTo(size.width / 2, size.height)
-      ..close();
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(_) => false;
 }

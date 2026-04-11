@@ -58,10 +58,16 @@ class _ItineraryRouteMapScreenState extends State<ItineraryRouteMapScreen> {
       var perm = await Geolocator.checkPermission();
       if (perm == LocationPermission.denied) perm = await Geolocator.requestPermission();
       if (perm != LocationPermission.denied && perm != LocationPermission.deniedForever) {
-        final pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.medium);
+        Position? pos = await Geolocator.getLastKnownPosition();
+        pos ??= await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.medium,
+          timeLimit: const Duration(seconds: 5), // Added timeout to prevent emulator hang
+        );
         _userPosition = LatLng(pos.latitude, pos.longitude);
       }
-    } catch (_) {}
+    } catch (_) {
+      debugPrint("Lỗi lấy vị trí (hoặc timeout trên máy ảo), dùng vị trí mặc định");
+    }
     _userPosition ??= LatLng(AppConfig.defaultLatitude, AppConfig.defaultLongitude);
 
     // 2. Sort stops by nearest-neighbor from user position

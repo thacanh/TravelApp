@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:provider/provider.dart';
 import '../../config/theme.dart';
 import '../../services/api_service.dart';
+import '../../providers/location_provider.dart';
 
 class AdminLocationsScreen extends StatefulWidget {
   const AdminLocationsScreen({super.key});
@@ -57,8 +59,10 @@ class _AdminLocationsScreenState extends State<AdminLocationsScreen> {
     if (confirmed != true) return;
     try {
       await _api.deleteLocation(id);
+      // Refresh cả local list và LocationProvider (realtime)
       _load(search: _searchCtrl.text.isEmpty ? null : _searchCtrl.text);
       if (mounted) {
+        context.read<LocationProvider>().fetchLocations(forceRefresh: true);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Đã xóa địa điểm'),
@@ -207,33 +211,20 @@ class _LocationAdminCard extends StatelessWidget {
 
   const _LocationAdminCard({required this.location, required this.onEdit, required this.onDelete});
 
-  String _catLabel(String? cat) {
-    switch (cat) {
-      case 'beach': return 'Bãi biển';
-      case 'mountain': return 'Núi';
-      case 'city': return 'Thành phố';
-      case 'cultural': return 'Văn hóa';
-      case 'nature': return 'Thiên nhiên';
-      default: return cat ?? '';
-    }
-  }
-
   Color _catColor(String? cat) {
-    switch (cat) {
-      case 'beach': return const Color(0xFF00BCD4);
-      case 'mountain': return const Color(0xFF4CAF50);
-      case 'city': return const Color(0xFFFF9800);
-      case 'cultural': return const Color(0xFF9C27B0);
-      case 'nature': return const Color(0xFF2E7D32);
-      default: return AppTheme.primaryColor;
-    }
+    // Generate stable color based on string hash
+    if (cat == null) return AppTheme.primaryColor;
+    final colors = [Colors.blue, Colors.green, Colors.orange, Colors.purple, Colors.teal, Colors.red, Colors.cyan];
+    return colors[cat.hashCode.abs() % colors.length];
   }
 
   @override
   Widget build(BuildContext context) {
+    // Lấy mảng categories từ N-N (API trả ra list object)
+    final catList = (location['categories'] as List?) ?? [];
+    final firstSlug = catList.isNotEmpty ? (catList.first['slug'] as String? ?? '') : '';
+    final catColor = _catColor(firstSlug);
     final images = (location['images'] as List?) ?? [];
-    final cat = location['category'] as String?;
-    final catColor = _catColor(cat);
     final rating = (location['rating_avg'] as num?)?.toDouble() ?? 0.0;
     final totalReviews = location['total_reviews'] as int? ?? 0;
 
@@ -276,30 +267,53 @@ class _LocationAdminCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: catColor.withAlpha(20),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(_catLabel(cat),
-                            style: TextStyle(fontSize: 11, color: catColor, fontWeight: FontWeight.w600)),
+                  // Danh mục N-N: hiển thị các badge categories
+                  if (catList.isNotEmpty)
+                    Wrap(
+                      spacing: 4,
+                      runSpacing: 2,
+                      children: catList.take(2).map((c) {
+                        final slug = c['slug'] as String? ?? '';
+                        final name = c['name'] as String? ?? slug;
+                        final color = _catColor(slug);
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: color.withAlpha(20),
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                          child: Text(
+                            name,
+                            style: TextStyle(color: color, fontSize: 10.5, fontWeight: FontWeight.w500),
+                          ),
+                        );
+                      }).toList()
+                        ..addAll(catList.length > 2
+                            ? [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[200],
+                                    borderRadius: BorderRadius.circular(5),
+                                  ),
+                                  child: Text('+${catList.length - 2}', style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                                )
+                              ]
+                            : []),
+                    ),
+                  const SizedBox(height: 4),
+                  Row(children: [
+                    const Icon(LucideIcons.mapPin, size: 11, color: AppTheme.textSecondary),
+                    const SizedBox(width: 2),
+                    Expanded(
+                      child: Text(
+                        location['city'] ?? '',
+                        style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(width: 6),
-                      const Icon(LucideIcons.mapPin, size: 11, color: AppTheme.textSecondary),
-                      const SizedBox(width: 2),
-                      Expanded(
-                        child: Text(
-                          location['city'] ?? '',
-                          style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ]),
                   const SizedBox(height: 4),
                   if (totalReviews > 0)
                     Row(

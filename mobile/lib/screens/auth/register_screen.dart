@@ -117,7 +117,7 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Tham gia TRAWiMe ngay hôm nay',
+                    'Tham gia TRAWIME ngay hôm nay',
                     style: TextStyle(fontSize: 14, color: Colors.white.withAlpha(190)),
                   ),
                   const SizedBox(height: 28),

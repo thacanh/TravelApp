@@ -10,7 +10,7 @@ from pydantic import BaseModel, EmailStr
 from pydantic_settings import BaseSettings
 from typing import Optional
 from datetime import datetime
-from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime
+from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from passlib.context import CryptContext
@@ -20,6 +20,7 @@ from fastapi import Header
 class Settings(BaseSettings):
     DATABASE_URL: str = "mysql+pymysql://root:root@localhost/trawime_db?charset=utf8mb4"
     UPLOAD_DIR: str = "uploads"
+    BASE_URL: str = "http://localhost:8002"   # URL public của user-service
     SECRET_KEY: str = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
     ALGORITHM: str = "HS256"
     class Config:
@@ -44,6 +45,12 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+class Favorite(Base):
+    __tablename__ = "favorites"
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    location_id = Column(Integer, primary_key=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 def get_db():
     db = SessionLocal()
     try:
@@ -53,6 +60,7 @@ def get_db():
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+from urllib.parse import unquote
 class CurrentUser:
     def __init__(self, id: int, role: str, email: str = ""):
         self.id = id; self.role = role; self.email = email
@@ -64,14 +72,28 @@ def get_current_user(
 ) -> CurrentUser:
     if not x_user_id:
         raise HTTPException(status_code=401, detail="Missing authentication headers")
-    return CurrentUser(id=int(x_user_id), role=x_user_role or "user", email=x_user_email or "")
+    return CurrentUser(
+        id=int(x_user_id), 
+        role=unquote(x_user_role) if x_user_role else "user", 
+        email=unquote(x_user_email) if x_user_email else ""
+    )
 
 # Schemas
+from pydantic import field_validator
+
 class UserResponse(BaseModel):
     id: int; email: str; full_name: str
     avatar_url: Optional[str]; phone: Optional[str]
     role: str; is_active: bool; created_at: datetime
     class Config: from_attributes = True
+
+    @field_validator('avatar_url', mode='after')
+    @classmethod
+    def normalize_avatar(cls, v: Optional[str]) -> Optional[str]:
+        """Đảm bảo avatar_url luôn là full URL (cho dữ liệu cũ lưu relative path)."""
+        if v and not v.startswith('http'):
+            return f"{settings.BASE_URL}/uploads/{v.lstrip('/')}"
+        return v
 
 class UserUpdate(BaseModel):
     full_name: Optional[str] = None
@@ -85,9 +107,13 @@ class ChangePasswordRequest(BaseModel):
 ALLOWED_EXT = {"png", "jpg", "jpeg", "gif", "webp"}
 
 def _save_file(upload_file: UploadFile, subfolder: str) -> str:
-    ext = upload_file.filename.rsplit(".", 1)[-1].lower()
-    if ext not in ALLOWED_EXT:
-        raise HTTPException(status_code=400, detail="File type not allowed")
+    raw_name = upload_file.filename or ""
+    ext = raw_name.rsplit(".", 1)[-1].lower() if "." in raw_name else ""
+    if not ext or ext not in ALLOWED_EXT:
+        raise HTTPException(
+            status_code=400,
+            detail=f"File type not allowed: '{ext}'. Allowed: {', '.join(ALLOWED_EXT)}"
+        )
     dest_dir = os.path.join(settings.UPLOAD_DIR, subfolder)
     os.makedirs(dest_dir, exist_ok=True)
     filename = f"{uuid4()}.{ext}"
@@ -98,8 +124,6 @@ def _save_file(upload_file: UploadFile, subfolder: str) -> str:
 
 app = FastAPI(title="TRAWiMe User Service", version="2.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
-
-Base.metadata.create_all(bind=engine)
 
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
@@ -144,9 +168,32 @@ async def upload_avatar(file: UploadFile = File(...), current: CurrentUser = Dep
     user = db.query(User).filter(User.id == current.id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    user.avatar_url = _save_file(file, "avatars")
+    # Lưu file và cập nhật full public URL
+    relative_path = _save_file(file, "avatars")
+    user.avatar_url = f"{settings.BASE_URL}/uploads/{relative_path}"
     db.commit(); db.refresh(user)
     return user
+
+@app.post("/api/users/favorites/{location_id}")
+def add_favorite(location_id: int, current: CurrentUser = Depends(get_current_user), db: Session = Depends(get_db)):
+    fav = db.query(Favorite).filter_by(user_id=current.id, location_id=location_id).first()
+    if not fav:
+        fav = Favorite(user_id=current.id, location_id=location_id)
+        db.add(fav)
+        db.commit()
+    return {"message": "Đã thêm vào mục yêu thích", "location_id": location_id}
+
+@app.delete("/api/users/favorites/{location_id}", status_code=204)
+def remove_favorite(location_id: int, current: CurrentUser = Depends(get_current_user), db: Session = Depends(get_db)):
+    fav = db.query(Favorite).filter_by(user_id=current.id, location_id=location_id).first()
+    if fav:
+        db.delete(fav)
+        db.commit()
+    return None
+
+@app.get("/api/users/favorites")
+def get_favorites(current: CurrentUser = Depends(get_current_user), db: Session = Depends(get_db)):
+    return [fav.location_id for fav in db.query(Favorite).filter_by(user_id=current.id).all()]
 
 if __name__ == "__main__":
     import uvicorn

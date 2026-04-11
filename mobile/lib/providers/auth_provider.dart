@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../models/user.dart';
 import '../services/api_service.dart';
 
@@ -81,15 +82,28 @@ class AuthProvider with ChangeNotifier {
 
   Future<void> getCurrentUser() async {
     try {
-      final response = await _apiService.getCurrentUser();
+      // Ưu tiên /api/users/profile — có đủ avatar_url, phone, v.v.
+      final response = await _apiService.getUserProfile();
       if (response.statusCode == 200) {
         _currentUser = User.fromJson(response.data);
         _isAuthenticated = true;
         notifyListeners();
+        return;
       }
     } catch (e) {
-      _currentUser = null;
-      _isAuthenticated = false;
+      debugPrint('[AuthProvider] getUserProfile() failed: $e');
+    }
+
+    // Fallback: thử /api/auth/me nếu user-service không phản hồi
+    try {
+      final res = await _apiService.getCurrentUserFromAuth();
+      if (res.statusCode == 200) {
+        _currentUser = User.fromJson(res.data);
+        _isAuthenticated = true;
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('[AuthProvider] auth/me fallback also failed: $e');
       notifyListeners();
     }
   }

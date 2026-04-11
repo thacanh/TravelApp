@@ -23,6 +23,16 @@ CREATE TABLE IF NOT EXISTS users (
     INDEX idx_email (email)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS favorites (
+    user_id       INT NOT NULL,
+    location_id   INT NOT NULL,
+    created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, location_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_user (user_id),
+    INDEX idx_location (location_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- ── LOCATION ──────────────────────────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS categories (
@@ -36,7 +46,6 @@ CREATE TABLE IF NOT EXISTS locations (
     id                    INT AUTO_INCREMENT PRIMARY KEY,
     name                  VARCHAR(255) NOT NULL,
     description           TEXT         NULL,
-    category              VARCHAR(50)  NOT NULL,
     address               VARCHAR(500) NULL,
     city                  VARCHAR(100) NOT NULL,
     country               VARCHAR(100) NOT NULL DEFAULT 'Vietnam',
@@ -49,9 +58,9 @@ CREATE TABLE IF NOT EXISTS locations (
     created_at            DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at            DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_city     (city),
-    INDEX idx_category (category),
     FULLTEXT INDEX ft_name (name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- Quan hệ N-N giữa Location và Category được quản lý qua bảng nối location_categories (xem phía dưới)
 
 CREATE TABLE IF NOT EXISTS location_categories (
     location_id INT NOT NULL,
