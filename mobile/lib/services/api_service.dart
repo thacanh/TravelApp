@@ -213,25 +213,6 @@ class ApiService {
     return await _dio.delete(path);
   }
 
-  // AI Chat Session APIs
-  Future<Response> getChatSessions() async {
-    return await _dio.get('/api/chat/sessions');
-  }
-
-  Future<Response> getChatSession(int sessionId) async {
-    return await _dio.get('/api/chat/sessions/$sessionId');
-  }
-
-  Future<Response> sendChatMessage({int? sessionId, required String message}) async {
-    return await _dio.post('/api/chat/send', data: {
-      'session_id': sessionId,
-      'message': message,
-    });
-  }
-
-  Future<Response> deleteChatSession(int sessionId) async {
-    return await _dio.delete('/api/chat/sessions/$sessionId');
-  }
 
   // User Profile APIs
   Future<Response> updateProfile(Map<String, dynamic> data) async {
@@ -282,6 +263,26 @@ class ApiService {
       'message': message,
       'context': context,
     });
+  }
+
+  // Chat Session APIs
+  Future<Response> getChatSessions() async {
+    return await _dio.get('/api/chat/sessions');
+  }
+
+  Future<Response> getChatSession(int sessionId) async {
+    return await _dio.get('/api/chat/sessions/$sessionId');
+  }
+
+  Future<Response> sendChatMessage(String message, {int? sessionId}) async {
+    return await _dio.post('/api/chat/send', data: {
+      'message': message,
+      if (sessionId != null) 'session_id': sessionId,
+    });
+  }
+
+  Future<Response> deleteChatSession(int sessionId) async {
+    return await _dio.delete('/api/chat/sessions/$sessionId');
   }
 
   // Admin APIs

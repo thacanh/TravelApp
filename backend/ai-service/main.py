@@ -93,7 +93,7 @@ def require_admin(current: CurrentUser = Depends(get_current_user)) -> CurrentUs
 # ── Gemini client setup ────────────────────────────────────────────────────────
 _gemini_available = False
 _client = None
-_MODEL = "gemini-2.5-flash"
+_MODEL = "gemini-3.1-flash-lite-preview"
 _EMBED_MODEL = "gemini-embedding-001"  # latest Gemini embedding model
 
 try:
@@ -116,7 +116,7 @@ except Exception as e:
     logger.warning(f"Gemini init error: {e}")
 
 _SYSTEM_INSTRUCTION = (
-    "Bạn là trợ lý du lịch AI của ứng dụng TRAWiMe, chuyên về du lịch Việt Nam. "
+    "Bạn là trợ lý du lịch AI của ứng dụng TRAWIME, chuyên về du lịch Việt Nam. "
     "Hãy trả lời bằng tiếng Việt, thân thiện, ngắn gọn và hữu ích. "
     "Khi được hỏi về địa điểm, hãy đưa ra thông tin thực tế về địa danh Việt Nam. "
     "Khi người dùng muốn lập lịch trình, hãy gợi ý lịch trình cụ thể theo ngày. "
@@ -181,21 +181,30 @@ def _embed_location(loc) -> List[float]:
     return _get_embedding(text)
 
 
-async def _gemini_chat(message: str) -> dict:
+async def _gemini_chat(message: str, history: list = None) -> dict:
     """
-    Chat with Gemini using GoogleSearch tool.
-    NOTE: ThinkingConfig is INTENTIONALLY omitted — combining it with
-    GoogleSearch tool causes API errors on gemini-2.5-flash.
+    Chat with Gemini sử dụng gemini-3.1-flash-lite-preview + ThinkingConfig MINIMAL.
+    history: list of {role, content} dicts từ DB (các tin nhắn trước).
     """
-    contents = [
+    contents = []
+    # Đưa lịch sử cuộc trò chuyện vào context
+    for h in (history or []):
+        contents.append(
+            gtypes.Content(
+                role=h["role"],  # "user" hoặc "model"
+                parts=[gtypes.Part.from_text(text=h["content"])],
+            )
+        )
+    # Tin nhắn hiện tại
+    contents.append(
         gtypes.Content(
             role="user",
             parts=[gtypes.Part.from_text(text=message)],
         )
-    ]
+    )
     config = gtypes.GenerateContentConfig(
         system_instruction=_SYSTEM_INSTRUCTION,
-        tools=[gtypes.Tool(googleSearch=gtypes.GoogleSearch())],
+        thinking_config=gtypes.ThinkingConfig(thinking_level="MINIMAL"),
     )
     response = _client.models.generate_content(
         model=_MODEL,
@@ -230,7 +239,7 @@ def _recommend_by_embedding(query: str, locations: list, top_k: int = 5) -> list
 async def _mock_chat(message: str) -> dict:
     msg = message.lower()
     if any(w in msg for w in ["xin chào", "hello", "hi", "chào"]):
-        return {"response": "Xin chào! Tôi là trợ lý du lịch TRAWiMe (offline mode).", "suggestions": ["Gợi ý địa điểm", "Tìm bãi biển", "Lập lịch trình"]}
+        return {"response": "Xin chào! Tôi là trợ lý du lịch TRAWIME (offline mode).", "suggestions": ["Gợi ý địa điểm", "Tìm bãi biển", "Lập lịch trình"]}
     if any(w in msg for w in ["biển", "beach"]):
         return {"response": "Việt Nam có nhiều bãi biển đẹp: Phú Quốc, Nha Trang, Đà Nẵng.", "suggestions": ["Chi tiết Phú Quốc", "Bãi biển gần Hà Nội", "Bãi biển ít người"]}
     return {"response": f"(Offline) Về '{message}', hãy khám phá thêm trên app!", "suggestions": ["Gợi ý địa điểm", "Hỏi về thời tiết", "Tư vấn lịch trình"]}
@@ -278,7 +287,7 @@ class ChatSessionResponse(BaseModel):
 
 
 # ── App ────────────────────────────────────────────────────────────────────────
-app = FastAPI(title="TRAWiMe AI Service", version="2.0.0")
+app = FastAPI(title="TRAWIME AI Service", version="2.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 @app.get("/health")
@@ -333,7 +342,7 @@ async def chat_with_ai(message: ChatMessageRequest, current: CurrentUser = Depen
     if not _gemini_available:
         return await _mock_chat(message.message)
     try:
-        return await _gemini_chat(message.message)
+        return await _gemini_chat(message.message)  # no history — legacy endpoint
     except Exception as e:
         logger.error(f"Gemini chat error: {e}")
         return await _mock_chat(message.message)
@@ -426,10 +435,16 @@ async def send_message(body: SendMessageRequest, current: CurrentUser = Depends(
     user_msg = ChatMessage(session_id=session.id, role="user", content=body.message)
     db.add(user_msg)
 
-    # Call AI
+    # Call AI with full session history for context
+    history = []
+    for msg in session.messages:
+        # Gemini dùng role "user" / "model" (không phải "assistant")
+        gemini_role = "model" if msg.role == "assistant" else "user"
+        history.append({"role": gemini_role, "content": msg.content})
+
     if _gemini_available:
         try:
-            ai_result = await _gemini_chat(body.message)
+            ai_result = await _gemini_chat(body.message, history=history)
         except Exception as e:
             logger.error(f"Chat error: {e}")
             ai_result = await _mock_chat(body.message)

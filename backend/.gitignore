@@ -1,0 +1,14 @@
+# Environment variables — chứa secrets, KHÔNG commit
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Docker
+*.log

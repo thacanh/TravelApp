@@ -319,41 +319,40 @@ class _LocationDetailScreenState extends State<LocationDetailScreen> {
                       ),
                       const SizedBox(height: 12),
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          if (location.categories.isEmpty)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: AppTheme.primaryColor.withAlpha(20),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: AppTheme.primaryColor.withAlpha(50)),
-                              ),
-                              child: Text(
-                                location.categoryDisplay, // Fallback to primary
-                                style: const TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.w600, fontSize: 12.5),
-                              ),
-                            )
-                          else
-                            ...location.categories.map((c) => Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: AppTheme.primaryColor.withAlpha(20),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: AppTheme.primaryColor.withAlpha(50)),
-                              ),
-                              child: Text(
-                                c.name,
-                                style: const TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.w600, fontSize: 12.5),
-                              ),
-                            )),
-                        ],
-                      ),
-                          const Spacer(),
-                        Container(
+                          Flexible(
+                            child: Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: [
+                                if (location.categories.isEmpty)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.primaryColor.withAlpha(18),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: AppTheme.primaryColor.withAlpha(45)),
+                                    ),
+                                    child: Text(location.categoryDisplay,
+                                      style: const TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.w600, fontSize: 12)),
+                                  )
+                                else
+                                  ...location.categories.map((c) => Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.primaryColor.withAlpha(18),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: AppTheme.primaryColor.withAlpha(45)),
+                                    ),
+                                    child: Text(c.name,
+                                      style: const TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.w600, fontSize: 12)),
+                                  )),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                             decoration: BoxDecoration(
                               color: const Color(0xFFFFF8E1),
@@ -365,7 +364,6 @@ class _LocationDetailScreenState extends State<LocationDetailScreen> {
                                 const Icon(Icons.star_rounded, color: Colors.amber, size: 18),
                                 const SizedBox(width: 4),
                                 Text(
-                                  // After reviews load, show live count from _reviews
                                   _isLoadingReviews
                                       ? location.ratingDisplay
                                       : _reviews.isEmpty
