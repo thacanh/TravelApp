@@ -1,13 +1,63 @@
-# Environment variables (sensitive config - API keys, DB passwords, IPs)
+# Environment variables and sensitive configurations
 .env
 *.env
 
-# Python
+# Python caching and environments
 __pycache__/
 *.pyc
 *.pyo
-.venv/
+*.pyd
+.Python
+env/
 venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.cache
+nosetests.xml
+coverage.xml
+*,cover
+.hypothesis/
+.pytest_cache/
 
-# Docker
+# Docker & Logs
 *.log
+logs/
+docker-compose.override.yml
+
+# IDEs and Editors
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Mobile (Flutter/Dart) exclusions
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/.packages
+mobile/.pub-cache/
+mobile/.pub/
+mobile/build/
+mobile/android/app/src/main/res/values/strings.xml
+mobile/android/local.properties
+mobile/android/key.properties
+mobile/ios/.symlinks/
+mobile/ios/Flutter/Debug.xcconfig
+mobile/ios/Flutter/Release.xcconfig
+mobile/ios/Flutter/Generated.xcconfig
+
+# Tech reports and temporary assignment descriptions (optional)
+agent_docs.md
+analyze_output.txt

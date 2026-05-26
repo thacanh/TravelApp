@@ -1,304 +1,147 @@
-# TRAWiMe - Ứng dụng Du lịch Việt Nam
+# TRAWiMe - Ứng dụng Quản lý Lịch trình Du lịch Việt Nam
 
-Ứng dụng di động Android hoàn chỉnh cho phép người dùng khám phá, tìm kiếm và quản lý các hoạt động du lịch tại Việt Nam với hỗ trợ AI thông minh.
+TRAWiMe là hệ thống hỗ trợ và quản lý lịch trình du lịch Việt Nam, tích hợp trợ lý ảo chatbot và gợi ý địa điểm thông minh bằng trí tuệ nhân tạo (AI) thông qua tìm kiếm vector (Vector Search) và độ tương đồng Cosine. Dự án bao gồm hệ thống backend xây dựng theo kiến trúc microservices sử dụng FastAPI và ứng dụng di động phía người dùng xây dựng bằng Flutter.
 
-![TRAWiMe](https://via.placeholder.com/800x200/00BCD4/FFFFFF?text=TRAWiMe+-+Travel+Vietnam)
+## Hướng dẫn cài đặt và khởi chạy hệ thống
 
-## ✨ Tính năng
+### 1. Khởi chạy Backend
 
-### Core Features
-- ✅ **Xác thực người dùng**: Đăng ký, đăng nhập với JWT
-- ✅ **Khám phá địa điểm**: Tìm kiếm, lọc theo danh mục, thành phố
-- ✅ **Chi tiết địa điểm**: Xem ảnh, mô tả, đánh giá, vị trí
-- ✅ **Check-in**: Upload ảnh, viết bình luận khi đến địa điểm
-- ✅ **Đánh giá & Review**: Đánh giá sao và nhận xét
-- ✅ **Quản lý lịch trình**: Tạo và quản lý kế hoạch du lịch
-- ✅ **Bản đồ**: Hiển thị vị trí địa điểm
-- ✅ **Profile**: Quản lý thông tin cá nhân
+Bạn có thể lựa chọn một trong hai phương thức chạy backend dưới đây:
 
-### AI Features
-- 🤖 **AI Chatbot**: Trợ lý du lịch thông minh
-- 🎯 **AI Recommendations**: Gợi ý địa điểm dựa trên sở thích
+#### Phương thức 1: Sử dụng Docker Compose (Khuyên dùng)
+Đây là phương thức nhanh nhất để khởi chạy cơ sở dữ liệu MySQL và toàn bộ các microservices:
 
-## 🏗️ Kiến trúc
-
-```
-trawime/
-├── backend/          # FastAPI Backend
-│   ├── app/
-│   │   ├── api/      # API endpoints
-│   │   ├── models/   # Database models
-│   │   ├── schemas/  # Pydantic schemas
-│   │   ├── services/ # Business logic
-│   │   └── utils/    # Utilities
-│   └── requirements.txt
-│
-└── mobile/           # Flutter Mobile App
-    ├── lib/
-    │   ├── config/   # Configuration
-    │   ├── models/   # Data models
-    │   ├── providers/# State management
-    │   ├── screens/  # UI screens
-    │   ├── services/ # API services
-    │   └── widgets/  # Reusable widgets
-    └── pubspec.yaml
-```
-
-## 🛠️ Tech Stack
-
-### Backend
-- **Framework**: FastAPI (Python)
-- **Database**: MySQL
-- **Authentication**: JWT
-- **ORM**: SQLAlchemy
-- **AI**: Google Gemini API (gemini-2.0-flash + embedding-001)
-- **API Documentation**: Swagger/OpenAPI
-
-### Mobile
-- **Framework**: Flutter
-- **State Management**: Provider
-- **HTTP Client**: Dio
-- **Local Storage**: Flutter Secure Storage
-- **UI**: Material Design 3
-- **Fonts**: Google Fonts (Poppins)
-
-## 📱 Screenshots
-
-(Thêm screenshots của app sau khi build)
-
-## 🚀 Cài đặt & Chạy
-
-### Yêu cầu
-- Python 3.9+
-- MySQL 8.0+
-- Flutter 3.16+
-- Android SDK (cho build APK)
-
-### Backend Setup
-
-#### 1. Clone repository
+1. Di chuyển vào thư mục backend:
 ```bash
 cd backend
 ```
 
-#### 2. Tạo virtual environment
+2. Sao chép cấu hình môi trường mẫu:
 ```bash
-python -m venv venv
-venv\Scripts\activate  # Windows
-# hoặc: source venv/bin/activate  # Mac/Linux
+copy .env.example .env
 ```
 
-#### 3. Cài đặt dependencies
+3. Khởi chạy Docker Compose:
 ```bash
-pip install -r requirements.txt
+docker compose up --build -d
 ```
 
-#### 4. Setup database
+Toàn bộ các dịch vụ và API Gateway sẽ tự động được biên dịch và khởi chạy ngầm. Bạn có thể kiểm tra trạng thái hoạt động của gateway tại: http://localhost:8000/health
+
+#### Phương thức 2: Chạy thủ công từng Microservice bằng Python
+Nếu không sử dụng Docker, bạn cần thiết lập cơ sở dữ liệu MySQL và chạy độc lập từng microservice:
+
+1. Tạo cơ sở dữ liệu MySQL:
 ```sql
--- Mở MySQL và tạo database
 CREATE DATABASE trawime_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-#### 5. Cấu hình environment
+2. Nhập dữ liệu khởi tạo (nếu cần):
 ```bash
-copy .env.example .env
-# Sửa file .env với thông tin database của bạn
+mysql -u root -p trawime_db < init_db.sql
 ```
 
-#### 6. Seed database (tùy chọn)
+3. Tạo tệp cấu hình môi trường `.env` tại thư mục backend bằng cách sao chép file mẫu:
+```bash
+cd backend
+copy .env.example .env
+```
+(Hãy chỉnh sửa các tham số trong .env cho khớp với cấu hình MySQL cục bộ của bạn và thêm khóa GEMINI_API_KEY)
+
+4. Chạy từng dịch vụ bằng Uvicorn:
+Mở terminal tại thư mục của từng microservice con, kích hoạt môi trường ảo và chạy:
+```bash
+cd backend/<ten-dich-vu>
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn main:app --port <cong-tuong-ung> --reload
+```
+
+#### Khởi tạo dữ liệu mẫu (Seed Data)
+Sau khi toàn bộ backend đã chạy thành công, chạy script python để tự động chèn dữ liệu địa điểm và danh mục du lịch mẫu vào cơ sở dữ liệu:
+
+1. Mở terminal tại thư mục backend
+2. Chạy lệnh:
 ```bash
 python seed_data.py
 ```
 
-#### 7. Chạy server
+### 2. Cài đặt và chạy Mobile Client (Flutter)
+
+1. Di chuyển vào thư mục mobile:
 ```bash
-uvicorn app.main:app --reload
+cd mobile
 ```
 
-API sẽ chạy tại: `http://localhost:8000`  
-API Docs: `http://localhost:8000/docs`
-
-### Mobile App Setup
-
-#### 1. Di chuyển vào thư mục mobile
-```bash
-cd ../mobile
-```
-
-#### 2. Cài đặt dependencies
+2. Cài đặt các thư viện phụ thuộc:
 ```bash
 flutter pub get
 ```
 
-#### 3. Cấu hình API endpoint
-Mở `lib/config/app_config.dart` và cập nhật:
+3. Cấu hình địa chỉ IP của API Gateway:
+Mở tệp lib/config/app_config.dart và cập nhật giá trị baseUrl:
+- Nếu chạy trên máy ảo Android (Emulator):
 ```dart
-static const String baseUrl = "http://10.0.2.2:8000"; // Android emulator
-// hoặc
-static const String baseUrl = "http://<YOUR_IP>:8000"; // Physical device
+static const String baseUrl = "http://10.0.2.2:8000";
+```
+- Nếu chạy trên thiết bị thật (máy tính và điện thoại cần kết nối chung mạng Wifi):
+```dart
+static const String baseUrl = "http://<IP_MAY_TINH_CUA_BAN>:8000";
 ```
 
-#### 4. Chạy app trên emulator/device
+4. Khởi chạy ứng dụng:
 ```bash
 flutter run
 ```
 
-### Build APK
-
-#### Debug APK (để test)
-```bash
-flutter build apk --debug
-```
-
-#### Release APK (production)
+5. Build ứng dụng thành file APK cài đặt:
 ```bash
 flutter build apk --release
 ```
+Tệp APK đầu ra sẽ nằm tại: `mobile/build/app/outputs/flutter-apk/app-release.apk`
 
-APK file sẽ được tạo tại: `build/app/outputs/flutter-apk/app-release.apk`
+## Tổng quan kiến trúc hệ thống
 
-#### Cài đặt APK trên điện thoại
-1. Copy file APK vào điện thoại
-2. Mở file APK và cho phép cài đặt từ nguồn không xác định
-3. Cài đặt và sử dụng
+Hệ thống được chia làm hai phần chính:
 
-## 📖 Hướng dẫn sử dụng
+1. **Backend (Kiến trúc Microservices)**:
+   Các dịch vụ chạy độc lập và giao tiếp nội bộ, được điều phối duy nhất thông qua API Gateway:
+   - api-gateway (Cổng 8000): Nhận các yêu cầu từ ứng dụng di động, thực hiện xác thực chữ ký JWT và chuyển tiếp yêu cầu đến các microservices tương ứng.
+   - auth-service (Cổng 8001): Quản lý tài khoản người dùng, đăng ký, đăng nhập và cấp phát token JWT.
+   - user-service (Cổng 8002): Quản lý thông tin hồ sơ người dùng và danh sách địa điểm yêu thích.
+   - location-service (Cổng 8003): Quản lý thông tin địa điểm du lịch, danh mục và tọa độ GPS lân cận.
+   - review-service (Cổng 8004): Quản lý bình luận, nhận xét và ảnh check-in thực tế của du khách.
+   - itinerary-service (Cổng 8005): Quản lý kế hoạch du lịch cá nhân và tối ưu hóa tuyến đường di chuyển trong ngày bằng thuật toán Nearest-Neighbor.
+   - ai-service (Cổng 8006): Tích hợp mô hình ngôn ngữ lớn để trả lời chatbot du lịch và tính toán độ tương đồng Cosine trên vector đặc trưng của các địa điểm.
 
-### Đăng ký tài khoản
-1. Mở app
-2. Nhấn "Đăng ký ngay"
-3. Điền thông tin và nhấn "Đăng ký"
+2. **Mobile Client (Flutter)**:
+   Ứng dụng di động cài đặt trên hệ điều hành Android/iOS để người dùng trực tiếp sử dụng dịch vụ.
 
-### Khám phá địa điểm
-1. Vào tab "Khám phá"
-2. Tìm kiếm hoặc lọc theo danh mục
-3. Nhấn vào địa điểm để xem chi tiết
+Chi tiết về cấu trúc và sơ đồ API của từng dịch vụ con được trình bày riêng trong tệp README.md đặt tại thư mục của dịch vụ đó.
 
-### Check-in
-1. Vào chi tiết địa điểm
-2. Nhấn "Check-in"
-3. Upload ảnh và viết bình luận
+Cấu trúc thư mục chính:
+```
+trawime/
+├── backend/          - Chứa mã nguồn backend và file cấu hình Docker Compose
+│   ├── api-gateway/
+│   ├── auth-service/
+│   ├── user-service/
+│   ├── location-service/
+│   ├── review-service/
+│   ├── itinerary-service/
+│   └── ai-service/
+└── mobile/           - Chứa mã nguồn ứng dụng Flutter
+```
 
-### Chat với AI
-1. Vào tab "AI Chat"
-2. Nhập câu hỏi hoặc yêu cầu
-3. AI sẽ trả lời và gợi ý
+## Tài khoản thử nghiệm mặc định
 
-## 🔑 Tài khoản Test
+Sau khi chạy script seed dữ liệu mẫu, bạn có thể đăng nhập ứng dụng bằng các tài khoản sau:
 
-Sau khi chạy `seed_data.py`, bạn có thể dùng:
-
-**Admin:**
+Tài khoản Quản trị viên (Admin):
 - Email: `admin@trawime.com`
-- Password: `admin123`
+- Mật khẩu: `admin123`
 
-**User:**
+Tài khoản Người dùng (User):
 - Email: `user@test.com`
-- Password: `user123`
-
-## 🌐 API Endpoints
-
-### Authentication
-- `POST /api/auth/register` - Đăng ký
-- `POST /api/auth/login` - Đăng nhập
-- `GET /api/auth/me` - Thông tin user
-
-### Locations
-- `GET /api/locations` - Danh sách địa điểm
-- `GET /api/locations/{id}` - Chi tiết địa điểm
-- `GET /api/locations/nearby` - Địa điểm gần
-
-### Check-ins
-- `POST /api/checkins` - Tạo check-in
-- `GET /api/checkins` - Lịch sử check-in
-
-### Reviews
-- `POST /api/reviews` - Viết đánh giá
-- `GET /api/reviews/location/{id}` - Đánh giá của địa điểm
-
-### AI
-- `POST /api/ai/recommend` - Gợi ý từ AI (embedding-based semantic search)
-- `POST /api/ai/chat` - Chat với AI (Gemini 2.0 Flash)
-- `POST /api/ai/generate-embeddings` - Tạo embeddings cho địa điểm (admin)
-
-### Admin
-- `GET /api/admin/users` - Danh sách người dùng (admin)
-- `PUT /api/admin/users/{id}/toggle-active` - Khóa/mở khóa tài khoản (admin)
-- `DELETE /api/admin/reviews/{id}` - Xóa đánh giá vi phạm (admin)
-- `DELETE /api/admin/checkins/{id}` - Xóa check-in vi phạm (admin)
-- `GET /api/admin/reviews` - Xem tất cả đánh giá (admin)
-- `GET /api/admin/stats` - Thống kê hệ thống (admin)
-
-*Xem full API documentation tại: `/docs` khi chạy backend*
-
-## 🎨 Design System
-
-### Colors
-- **Primary**: Teal (#00BCD4)
-- **Secondary**: Deep Orange (# FF5722)
-- **Accent**: Amber (#FFC107)
-
-### Typography
-- **Font Family**: Poppins
-- **Heading**: Bold, 20-32px
-- **Body**: Regular, 14-16px
-
-## 🔧 Troubleshooting
-
-### Backend không kết nối được database
-```bash
-# Kiểm tra MySQL đang chạy
-# Kiểm tra thông tin trong .env (mysql+pymysql://user:pass@localhost/trawime_db)
-# Thử tạo lại database
-```
-
-### Mobile app không kết nối được API
-```bash
-# Kiểm tra baseUrl trong app_config.dart
-# Đảm bảo backend đang chạy
-# Với emulator: dùng 10.0.2.2
-# Với device: dùng IP máy tính (cùng mạng WiFi)
-```
-
-### Build APK lỗi
-```bash
-# Xóa cache và rebuild
-flutter clean
-flutter pub get
-flutter build apk --release
-```
-
-## 🚀 Future Enhancements
-
-- [ ] Tích hợp Google Maps thật
-- [ ] Push notifications
-- [ ] Social sharing
-- [ ] Offline mode
-- [ ] Multi-language support
-- [ ] Payment integration
-- [ ] Booking system
-- [ ] Real-time chat between users
-
-## 👥 Đối tượng sử dụng
-
-- **User**: Người dùng cuối, du khách
-- **Admin**: Quản trị viên, quản lý nội dung
-
-## 📄 License
-
-MIT License - Xem file LICENSE
-
-## 👨‍💻 Phát triển bởi
-
-TRAWiMe Team
-
-## 📞 Liên hệ
-
-- Email: support@trawime.com
-- Website: https://trawime.com
-
----
-
-**Lưu ý**: Đây là phiên bản MVP. Một số tính năng có thể cần cải thiện thêm trước khi release production.
-
-**Cảm ơn bạn đã sử dụng TRAWiMe! 🎉**
+- Mật khẩu: `user123`

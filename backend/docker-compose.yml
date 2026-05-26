@@ -42,7 +42,7 @@ services:
       - "8002:8002"
     environment:
       - DATABASE_URL=mysql+pymysql://root:220104@host.docker.internal:3306/trawime_db?charset=utf8mb4
-      - BASE_URL=http://192.168.100.222:8000
+      - BASE_URL=https://unpredaceously-suburbicarian-nelle.ngrok-free.dev
     volumes:
       - user_service_uploads:/app/uploads
     extra_hosts:
@@ -55,7 +55,7 @@ services:
       - "8003:8003"
     environment:
       - DATABASE_URL=mysql+pymysql://root:220104@host.docker.internal:3306/trawime_db?charset=utf8mb4
-      - BASE_URL=http://192.168.100.222:8003
+      - BASE_URL=https://unpredaceously-suburbicarian-nelle.ngrok-free.dev
     volumes:
       - location_media:/app/media
     extra_hosts:
@@ -70,7 +70,7 @@ services:
       - DATABASE_URL=mysql+pymysql://root:220104@host.docker.internal:3306/trawime_db?charset=utf8mb4
       - LOCATION_SERVICE_URL=http://location-service:8003
       - USER_SERVICE_URL=http://user-service:8002
-      - BASE_URL=http://192.168.100.222:8000
+      - BASE_URL=https://unpredaceously-suburbicarian-nelle.ngrok-free.dev
     volumes:
       - review_service_uploads:/app/uploads
     extra_hosts:

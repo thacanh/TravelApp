@@ -1,33 +1,38 @@
-"""location-service: handles /api/locations/* and /api/categories/*"""
-import math
 import os
 import uuid
-import httpx
 import aiofiles
 from pathlib import Path
 from typing import Optional, List
-from datetime import datetime
-from fastapi import FastAPI, Depends, HTTPException, Query, Header, BackgroundTasks, UploadFile, File
+import sys
+sys.path.insert(0, "/app")
+
+from fastapi import FastAPI, Depends, HTTPException, Query, BackgroundTasks, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, JSON, Text, ForeignKey, func
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import Session, sessionmaker, relationship
-from pydantic import BaseModel
-from pydantic_settings import BaseSettings
 
+# Import các mô-đun nội bộ sau khi đã được tách
+from models import get_db, Category, Location, settings
+from helpers import (
+    _trigger_embedding,
+    CurrentUser,
+    get_current_user,
+    require_admin,
+    _resolve_categories,
+    _cleanup_orphan_categories,
+    haversine,
+    _enrich,
+    _enrich_many,
+)
+from schemas import (
+    CategoryResponse,
+    CategoryCreate,
+    LocationResponse,
+    LocationCreate,
+    LocationUpdate,
+)
 
-class Settings(BaseSettings):
-    DATABASE_URL: str = "mysql+pymysql://root:root@localhost/trawime_db?charset=utf8mb4"
-    AI_SERVICE_URL: str = "http://ai-service:8006"
-    BASE_URL: str = "http://localhost:8003"   # URL public để tạo link media
-    class Config: env_file = ".env"
-
-settings = Settings()
-
-# ── Media storage ─────────────────────────────────────────────────────────────
+# Thiết lập các tham số lưu trữ media
 MEDIA_DIR = Path("/app/media")
 MEDIA_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -37,299 +42,75 @@ ALLOWED_MEDIA_TYPES = ALLOWED_IMAGE_TYPES | ALLOWED_VIDEO_TYPES
 MAX_IMAGE_SIZE = 10 * 1024 * 1024   # 10 MB
 MAX_VIDEO_SIZE = 100 * 1024 * 1024  # 100 MB
 
-async def _trigger_embedding(location_id: int):
-    """Fire-and-forget: ask ai-service to embed this location."""
-    import logging
-    logger = logging.getLogger("location-service")
-    try:
-        async with httpx.AsyncClient(timeout=30) as client:
-            await client.post(
-                f"{settings.AI_SERVICE_URL}/internal/embed-location/{location_id}"
-            )
-    except Exception as e:
-        logger.warning(f"Could not trigger embedding for location {location_id}: {e}")
-
-engine = create_engine(settings.DATABASE_URL, pool_pre_ping=True, pool_recycle=3600)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
-
-# ── Models ─────────────────────────────────────────────────────────────────────
-class Category(Base):
-    __tablename__ = "categories"
-    id = Column(Integer, primary_key=True, index=True)
-    slug = Column(String(50), unique=True, index=True, nullable=False)
-    name = Column(String(100), nullable=False)
-
-class LocationCategory(Base):
-    __tablename__ = "location_categories"
-    location_id = Column(Integer, ForeignKey("locations.id", ondelete="CASCADE"), primary_key=True)
-    category_id = Column(Integer, ForeignKey("categories.id", ondelete="CASCADE"), primary_key=True)
-
-class Location(Base):
-    __tablename__ = "locations"
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(255), nullable=False, index=True)
-    description = Column(Text, nullable=True)
-    address = Column(String(500), nullable=True)
-    city = Column(String(100), nullable=False, index=True)
-    country = Column(String(100), default="Vietnam")
-    latitude = Column(Float, nullable=True)
-    longitude = Column(Float, nullable=True)
-    images = Column(JSON, default=list)
-    thumbnail = Column(String(2048), nullable=True)   # Ảnh đại diện do người dùng chọn
-    description_embedding = Column(JSON, nullable=True)
-    created_by = Column(Integer, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    # Quan hệ N-N với Category qua bảng nối location_categories
-    categories = relationship("Category", secondary="location_categories", lazy="selectin")
-
-class Review(Base):
-    __tablename__ = "reviews"
-    id = Column(Integer, primary_key=True)
-    location_id = Column(Integer, ForeignKey("locations.id"), nullable=False)
-    rating = Column(Float, nullable=False)
-
-def get_db():
-    db = SessionLocal()
-    try: yield db
-    finally: db.close()
-
-# ── Auth ───────────────────────────────────────────────────────────────────────
-class CurrentUser:
-    def __init__(self, id: int, role: str):
-        self.id = id; self.role = role
-
-def get_current_user(x_user_id: Optional[str] = Header(None), x_user_role: Optional[str] = Header(None)) -> CurrentUser:
-    if not x_user_id:
-        raise HTTPException(status_code=401, detail="Missing authentication headers")
-    return CurrentUser(id=int(x_user_id), role=x_user_role or "user")
-
-def require_admin(current: CurrentUser = Depends(get_current_user)) -> CurrentUser:
-    if current.role != "admin":
-        raise HTTPException(status_code=403, detail="Not enough permissions")
-    return current
-
-# ── Schemas ────────────────────────────────────────────────────────────────────
-class CategoryResponse(BaseModel):
-    id: int; slug: str; name: str
-    class Config: from_attributes = True
-
-class CategoryInput(BaseModel):
-    """Dùng khi tạo/chỉnh sửa địa điểm — hỗ trợ cả category cũ và mới chưa tồn tại."""
-    slug: str
-    name: Optional[str] = None   # Cần khi tạo mới; nếu bỏ qua sẽ dùng slug làm name
-
-class LocationResponse(BaseModel):
-    id: int; name: str; description: Optional[str]
-    categories: List[CategoryResponse] = []
-    address: Optional[str]; city: str; country: str
-    latitude: Optional[float]; longitude: Optional[float]
-    rating_avg: float; total_reviews: int
-    images: Optional[list]; thumbnail: Optional[str]; created_at: datetime
-
-class LocationCreate(BaseModel):
-    name: str; description: Optional[str] = None
-    categories_input: List[CategoryInput] = []   # Hỗ trợ tạo mới nếu chưa có
-    address: Optional[str] = None; city: str; country: str = "Vietnam"
-    latitude: Optional[float] = None; longitude: Optional[float] = None
-    images: Optional[list] = []
-    thumbnail: Optional[str] = None
-
-class LocationUpdate(BaseModel):
-    name: Optional[str] = None; description: Optional[str] = None
-    categories_input: Optional[List[CategoryInput]] = None   # Ghi đè toàn bộ nếu gửi
-    address: Optional[str] = None
-    city: Optional[str] = None; country: Optional[str] = None
-    latitude: Optional[float] = None; longitude: Optional[float] = None
-    images: Optional[list] = None
-    thumbnail: Optional[str] = None
-
-# ── Category helpers ───────────────────────────────────────────────────────────
-import re as _re
-
-def _make_slug(name: str) -> str:
-    """Tạo slug từ name: lowercase, bỏ dấu cách bằng gạch nối, giữ alphanumeric."""
-    s = name.lower().strip()
-    s = _re.sub(r'[\s_]+', '-', s)
-    s = _re.sub(r'[^\w-]', '', s, flags=_re.UNICODE)
-    s = _re.sub(r'-+', '-', s).strip('-')
-    return s or 'category'
-
-def _resolve_categories(inputs: list, db: Session) -> list:
-    """Upsert danh sách categories: tìm theo slug, tạo mới nếu chưa có."""
-    result = []
-    seen = set()
-    for inp in inputs:
-        slug = inp.slug.strip() if inp.slug else _make_slug(inp.name or 'category')
-        if not slug:
-            continue
-        if slug in seen:
-            continue
-        seen.add(slug)
-        cat = db.query(Category).filter(Category.slug == slug).first()
-        if not cat:
-            name = inp.name or slug
-            cat = Category(slug=slug, name=name)
-            db.add(cat)
-            db.flush()   # lấy id mà chưa commit
-        result.append(cat)
-    return result
-
-def _cleanup_orphan_categories(db: Session):
-    """Xóa các category không còn địa điểm nào."""
-    used_ids = db.query(LocationCategory.category_id).distinct().subquery()
-    orphans = db.query(Category).filter(~Category.id.in_(used_ids)).all()
-    for cat in orphans:
-        db.delete(cat)
-    if orphans:
-        db.commit()
-
-# ── Other helpers ──────────────────────────────────────────────────────────────
-def haversine(lat1, lon1, lat2, lon2) -> float:
-    R = 6371
-    dlat = math.radians(lat2 - lat1)
-    dlon = math.radians(lon2 - lon1)
-    a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon/2)**2
-    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-
-def _enrich(loc: Location, db: Session) -> dict:
-    """Compute rating_avg and total_reviews on-the-fly from the reviews table."""
-    result = db.query(
-        func.avg(Review.rating).label("avg_rating"),
-        func.count(Review.id).label("total"),
-    ).filter(Review.location_id == loc.id).first()
-    rating_avg = round(float(result.avg_rating), 2) if result.avg_rating else 0.0
-    total_reviews = result.total or 0
-    imgs = loc.images or []
-    return {
-        "id": loc.id, "name": loc.name, "description": loc.description,
-        "categories": [{"id": c.id, "slug": c.slug, "name": c.name} for c in (loc.categories or [])],
-        "address": loc.address,
-        "city": loc.city, "country": loc.country,
-        "latitude": loc.latitude, "longitude": loc.longitude,
-        "rating_avg": rating_avg, "total_reviews": total_reviews,
-        "images": imgs,
-        "thumbnail": loc.thumbnail or (imgs[0] if imgs else None),
-        "created_at": loc.created_at,
-    }
-
-def _enrich_many(locs: list, db: Session) -> list:
-    """Bulk compute ratings for a list of locations in one query."""
-    if not locs:
-        return []
-    ids = [l.id for l in locs]
-    rows = db.query(
-        Review.location_id,
-        func.avg(Review.rating).label("avg_rating"),
-        func.count(Review.id).label("total"),
-    ).filter(Review.location_id.in_(ids)).group_by(Review.location_id).all()
-    stats = {r.location_id: (r.avg_rating, r.total) for r in rows}
-
-    result = []
-    for loc in locs:
-        avg, total = stats.get(loc.id, (None, 0))
-        imgs = loc.images or []
-        result.append({
-            "id": loc.id, "name": loc.name, "description": loc.description,
-            "categories": [{"id": c.id, "slug": c.slug, "name": c.name} for c in (loc.categories or [])],
-            "address": loc.address,
-            "city": loc.city, "country": loc.country,
-            "latitude": loc.latitude, "longitude": loc.longitude,
-            "rating_avg": round(float(avg), 2) if avg else 0.0,
-            "total_reviews": total or 0,
-            "images": imgs,
-            "thumbnail": loc.thumbnail or (imgs[0] if imgs else None),
-            "created_at": loc.created_at,
-        })
-    return result
-
-# ── App ────────────────────────────────────────────────────────────────────────
 app = FastAPI(title="TRAWiMe Location Service", version="2.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
-# Serve uploaded media as static files at /media/<filename>
+# Gắn kết thư mục chứa ảnh/video để phục vụ truy cập trực tiếp từ liên kết
 app.mount("/media", StaticFiles(directory=str(MEDIA_DIR)), name="media")
 
 @app.get("/health")
-def health(): return {"status": "healthy", "service": "location-service"}
+def health(): 
+    # API kiểm tra trạng thái hoạt động của location-service
+    return {"status": "healthy", "service": "location-service"}
 
-# Media Upload
 @app.post("/api/locations/upload-media")
-async def upload_media(
-    file: UploadFile = File(...),
-    current: CurrentUser = Depends(require_admin),
-):
-    """Upload ảnh hoặc video cho địa điểm. Trả về URL public có thể dùng trong trường images."""
-    if file.content_type not in ALLOWED_MEDIA_TYPES:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Loại file không hỗ trợ: {file.content_type}. Chấp nhận: ảnh (jpg/png/webp/gif) và video (mp4/mov/avi/webm)",
-        )
+async def upload_media(file: UploadFile = File(...), current: CurrentUser = Depends(require_admin)):
+    # API tải lên hình ảnh hoặc video của địa điểm lên ổ đĩa
+    content_type = file.content_type or ""
+    if content_type not in ALLOWED_MEDIA_TYPES:
+        raise HTTPException(status_code=400, detail=f"Dinh dang file khong duoc ho tro: {content_type}")
 
-    # Đọc file để kiểm tra kích thước
-    contents = await file.read()
-    is_video = file.content_type in ALLOWED_VIDEO_TYPES
-    max_size = MAX_VIDEO_SIZE if is_video else MAX_IMAGE_SIZE
-    if len(contents) > max_size:
-        limit_mb = max_size // (1024 * 1024)
-        raise HTTPException(status_code=413, detail=f"File quá lớn. Giới hạn: {limit_mb}MB")
+    content = await file.read()
+    size = len(content)
+    if content_type in ALLOWED_IMAGE_TYPES and size > MAX_IMAGE_SIZE:
+        raise HTTPException(status_code=413, detail="Dung luong anh vuot qua 10MB")
+    if content_type in ALLOWED_VIDEO_TYPES and size > MAX_VIDEO_SIZE:
+        raise HTTPException(status_code=413, detail="Dung luong video vuot qua 100MB")
 
-    # Sinh tên file unique
     ext = Path(file.filename).suffix.lower() if file.filename else ".bin"
     filename = f"{uuid.uuid4().hex}{ext}"
     dest = MEDIA_DIR / filename
 
     async with aiofiles.open(dest, "wb") as f:
-        await f.write(contents)
+        await f.write(content)
 
-    url = f"{settings.BASE_URL}/media/{filename}"
-    return {"url": url, "filename": filename, "type": "video" if is_video else "image", "size": len(contents)}
+    public_url = f"{settings.BASE_URL}/media/{filename}"
+    return {"url": public_url, "filename": filename}
 
-@app.delete("/api/locations/media/{filename}", status_code=200)
+@app.delete("/api/locations/media/{filename}", status_code=204)
 async def delete_media(filename: str, current: CurrentUser = Depends(require_admin)):
-    """Xóa file ảnh/video khỏi disk. Chỉ admin mới được phép."""
-    # Bảo vệ path traversal
+    # API xóa tệp tin media ra khỏi ổ đĩa
     if "/" in filename or "\\" in filename or ".." in filename:
-        raise HTTPException(status_code=400, detail="Tên file không hợp lệ")
+        raise HTTPException(status_code=400, detail="Ten file khong dung quy cach")
     dest = MEDIA_DIR / filename
-    if not dest.exists():
-        raise HTTPException(status_code=404, detail="File không tồn tại")
-    dest.unlink()
-    return {"deleted": filename}
+    if dest.exists():
+        dest.unlink()
 
 @app.get("/api/categories", response_model=List[CategoryResponse])
 def get_categories(db: Session = Depends(get_db)):
+    # API lấy toàn bộ danh mục địa điểm
     return db.query(Category).order_by(Category.name).all()
 
-class CategoryCreate(BaseModel):
-    slug: str
-    name: str
-
 @app.post("/api/categories", response_model=CategoryResponse, status_code=201)
-def create_category(
-    data: CategoryCreate,
-    current: CurrentUser = Depends(require_admin),
-    db: Session = Depends(get_db),
-):
+def create_category(data: CategoryCreate, current: CurrentUser = Depends(require_admin), db: Session = Depends(get_db)):
+    # API tạo một danh mục mới
     if db.query(Category).filter(Category.slug == data.slug).first():
-        raise HTTPException(status_code=400, detail=f"Danh mục '{data.slug}' đã tồn tại")
+        raise HTTPException(status_code=400, detail=f"Danh muc '{data.slug}' da co san")
     cat = Category(slug=data.slug, name=data.name)
-    db.add(cat); db.commit(); db.refresh(cat)
+    db.add(cat)
+    db.commit()
+    db.refresh(cat)
     return cat
 
 @app.delete("/api/categories/{slug}", status_code=204)
-def delete_category(
-    slug: str,
-    current: CurrentUser = Depends(require_admin),
-    db: Session = Depends(get_db),
-):
+def delete_category(slug: str, current: CurrentUser = Depends(require_admin), db: Session = Depends(get_db)):
+    # API xóa một danh mục theo slug
     cat = db.query(Category).filter(Category.slug == slug).first()
     if not cat:
-        raise HTTPException(status_code=404, detail="Không tìm thấy danh mục")
-    db.delete(cat); db.commit()
+        raise HTTPException(status_code=404, detail="Khong tim thay danh muc")
+    db.delete(cat)
+    db.commit()
 
-# Locations
 @app.get("/api/locations")
 def get_locations(
     skip: int = Query(0, ge=0), limit: int = Query(20, ge=1, le=100),
@@ -337,35 +118,40 @@ def get_locations(
     search: Optional[str] = None, min_rating: Optional[float] = None,
     db: Session = Depends(get_db)
 ):
+    # API lấy danh sách các địa điểm du lịch có phân trang, tìm kiếm và sắp xếp theo điểm đánh giá
     from sqlalchemy.orm import joinedload
     q = db.query(Location).options(joinedload(Location.categories))
     if category:
-        # Lọc theo slug của bất kỳ category nào trong danh sách N-N
         q = q.filter(Location.categories.any(Category.slug == category))
-    if city: q = q.filter(Location.city.ilike(f"%{city}%"))
-    if search: q = q.filter(Location.name.ilike(f"%{search}%") | Location.description.ilike(f"%{search}%"))
+    if city: 
+        q = q.filter(Location.city.ilike(f"%{city}%"))
+    if search: 
+        q = q.filter(Location.name.ilike(f"%{search}%") | Location.description.ilike(f"%{search}%"))
     locs = q.offset(skip).limit(limit).all()
     enriched = _enrich_many(locs, db)
     if min_rating:
         enriched = [e for e in enriched if e["rating_avg"] >= min_rating]
-    # Sort by rating desc
     enriched.sort(key=lambda x: x["rating_avg"], reverse=True)
     return enriched
 
 @app.get("/api/locations/nearby")
 def get_nearby(latitude: float = Query(...), longitude: float = Query(...), radius_km: float = Query(50), db: Session = Depends(get_db)):
+    # API tìm kiếm các địa điểm lân cận trong bán kính bằng công thức Haversine
     all_locs = db.query(Location).filter(Location.latitude.isnot(None), Location.longitude.isnot(None)).all()
     filtered = [l for l in all_locs if haversine(latitude, longitude, l.latitude, l.longitude) <= radius_km]
     return _enrich_many(filtered, db)
 
 @app.get("/api/locations/{location_id}")
 def get_location(location_id: int, db: Session = Depends(get_db)):
+    # API lấy thông tin chi tiết của một địa điểm kèm điểm sao trung bình
     loc = db.query(Location).filter(Location.id == location_id).first()
-    if not loc: raise HTTPException(status_code=404, detail="Không tìm thấy địa điểm")
+    if not loc: 
+        raise HTTPException(status_code=404, detail="Khong tim thay dia diem")
     return _enrich(loc, db)
 
 @app.post("/api/locations", status_code=201)
 async def create_location(data: LocationCreate, background_tasks: BackgroundTasks, current: CurrentUser = Depends(require_admin), db: Session = Depends(get_db)):
+    # API tạo địa điểm mới (chỉ quản trị viên), kích hoạt tạo vector đặc trưng chạy ngầm
     cats = _resolve_categories(data.categories_input, db)
     loc = Location(
         name=data.name, description=data.description,
@@ -375,22 +161,25 @@ async def create_location(data: LocationCreate, background_tasks: BackgroundTask
         created_by=current.id,
     )
     loc.categories = cats
-    db.add(loc); db.commit(); db.refresh(loc)
+    db.add(loc)
+    db.commit()
+    db.refresh(loc)
     background_tasks.add_task(_trigger_embedding, loc.id)
     return _enrich(loc, db)
 
 @app.put("/api/locations/{location_id}")
 async def update_location(location_id: int, data: LocationUpdate, background_tasks: BackgroundTasks, current: CurrentUser = Depends(require_admin), db: Session = Depends(get_db)):
+    # API chỉnh sửa địa điểm, dọn dẹp các danh mục mồ côi
     loc = db.query(Location).filter(Location.id == location_id).first()
-    if not loc: raise HTTPException(status_code=404, detail="Không tìm thấy địa điểm")
+    if not loc: 
+        raise HTTPException(status_code=404, detail="Khong tim thay dia diem")
     for k, v in data.model_dump(exclude_unset=True, exclude={"categories_input"}).items():
         setattr(loc, k, v)
-    # Nếu client gửi categories_input → ghi đè hoàn toàn
     if data.categories_input is not None:
         cats = _resolve_categories(data.categories_input, db)
         loc.categories = cats
-    db.commit(); db.refresh(loc)
-    # Dọn orphan categories sau khi cập nhật
+    db.commit()
+    db.refresh(loc)
     _cleanup_orphan_categories(db)
     if data.description is not None:
         background_tasks.add_task(_trigger_embedding, loc.id)
@@ -398,52 +187,15 @@ async def update_location(location_id: int, data: LocationUpdate, background_tas
 
 @app.delete("/api/locations/{location_id}", status_code=204)
 def delete_location(location_id: int, current: CurrentUser = Depends(require_admin), db: Session = Depends(get_db)):
+    # API xóa địa điểm (chỉ quản trị viên)
     loc = db.query(Location).filter(Location.id == location_id).first()
-    if not loc: raise HTTPException(status_code=404, detail="Không tìm thấy địa điểm")
+    if not loc: 
+        raise HTTPException(status_code=404, detail="Khong tim thay dia diem")
     db.delete(loc)
     db.commit()
-    # Dọn orphan categories sau khi xóa địa điểm
     _cleanup_orphan_categories(db)
-
-# ── Media upload/delete ────────────────────────────────────────────────────────
-@app.post("/api/locations/upload-media")
-async def upload_media(
-    file: UploadFile = File(...),
-    current: CurrentUser = Depends(require_admin),
-):
-    """Upload ảnh/video cho địa điểm. Trả về URL public."""
-    content_type = file.content_type or ""
-    if content_type not in ALLOWED_MEDIA_TYPES:
-        raise HTTPException(status_code=400, detail=f"Định dạng không hỗ trợ: {content_type}")
-
-    content = await file.read()
-    size = len(content)
-    if content_type in ALLOWED_IMAGE_TYPES and size > MAX_IMAGE_SIZE:
-        raise HTTPException(status_code=413, detail="Ảnh vượt quá 10MB")
-    if content_type in ALLOWED_VIDEO_TYPES and size > MAX_VIDEO_SIZE:
-        raise HTTPException(status_code=413, detail="Video vượt quá 100MB")
-
-    ext = (file.filename or "file").rsplit(".", 1)[-1].lower()
-    filename = f"{uuid.uuid4().hex}.{ext}"
-    dest = MEDIA_DIR / filename
-
-    async with aiofiles.open(dest, "wb") as f:
-        await f.write(content)
-
-    public_url = f"{settings.BASE_URL}/media/{filename}"
-    return {"url": public_url, "filename": filename}
-
-
-@app.delete("/api/locations/media/{filename}", status_code=204)
-async def delete_media(filename: str, current: CurrentUser = Depends(require_admin)):
-    """Xóa file media đã upload."""
-    dest = MEDIA_DIR / filename
-    if dest.exists():
-        dest.unlink()
-
-# ── Static files mount (serve /media/*) ───────────────────────────────────────
-app.mount("/media", StaticFiles(directory=str(MEDIA_DIR)), name="media")
 
 if __name__ == "__main__":
     import uvicorn
+    # Khởi động máy chủ uvicorn tại cổng 8003
     uvicorn.run("main:app", host="0.0.0.0", port=8003, reload=True)

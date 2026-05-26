@@ -1,175 +1,51 @@
-"""review-service: handles /api/reviews/*"""
-import os, shutil
+import os
+import shutil
 from uuid import uuid4
-from typing import Optional, List
-from datetime import datetime
-from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Header
+from typing import List
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, DateTime, Float, Text, JSON, func
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
-from pydantic import BaseModel
-from pydantic_settings import BaseSettings
+from sqlalchemy.orm import Session
 import httpx
 
-class Settings(BaseSettings):
-    DATABASE_URL: str = "mysql+pymysql://root:root@localhost/trawime_db?charset=utf8mb4"
-    UPLOAD_DIR: str = "uploads"
-    LOCATION_SERVICE_URL: str = "http://location-service:8003"
-    USER_SERVICE_URL: str = "http://user-service:8002"
-    BASE_URL: str = "http://localhost:8004"  # URL public của review-service
-    class Config: env_file = ".env"
+from models import settings, Review, get_db
+from helpers import CurrentUser, get_current_user, _enrich_review
+from schemas import ReviewCreate, ReviewUpdate
 
-settings = Settings()
-engine = create_engine(settings.DATABASE_URL, pool_pre_ping=True, pool_recycle=3600)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
-
-class Review(Base):
-    __tablename__ = "reviews"
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, nullable=False)
-    location_id = Column(Integer, nullable=False)
-    rating = Column(Float, nullable=False)
-    comment = Column(Text, nullable=True)
-    photos = Column(JSON, default=list)
-    # Lưu user info để tránh round-trip sang user-service khi đọc
-    user_name = Column(String(100), nullable=True)
-    user_email = Column(String(255), nullable=True)
-    visited_at = Column(DateTime, default=datetime.utcnow)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-def get_db():
-    db = SessionLocal()
-    try: yield db
-    finally: db.close()
-
-from urllib.parse import unquote
-class CurrentUser:
-    def __init__(self, id: int, role: str, email: str = "", name: str = ""):
-        self.id = id; self.role = role; self.email = email; self.name = name
-
-def get_current_user(
-    x_user_id: Optional[str] = Header(None),
-    x_user_role: Optional[str] = Header(None),
-    x_user_email: Optional[str] = Header(None),
-    x_user_name: Optional[str] = Header(None),
-) -> CurrentUser:
-    if not x_user_id:
-        raise HTTPException(status_code=401, detail="Missing auth headers")
-    return CurrentUser(
-        id=int(x_user_id),
-        role=unquote(x_user_role) if x_user_role else "user",
-        email=unquote(x_user_email) if x_user_email else "",
-        name=unquote(x_user_name) if x_user_name else "",
-    )
-
-import re as _re
-
-# Pattern nhận dạng URL đang trỏ thẳng vào port của service (không qua gateway)
-_OLD_PORT_PATTERN = _re.compile(r'https?://[^/]+:\d+/')
-
-def _normalize_photo_url(p: str) -> str:
-    """Chuẩn hóa URL ảnh về dạng dùng gateway."""
-    if not p:
-        return p
-    if p.startswith("http"):
-        # Nếu URL trỏ thẳng vào port service (VD: :8004) → remap qua BASE_URL
-        def _replace_base(m):
-            path_part = p[m.end()-1:]  # lấy phần /uploads/reviews/xxx.jpg
-            return settings.BASE_URL + path_part
-        return _OLD_PORT_PATTERN.sub(lambda m: settings.BASE_URL + "/" , p, count=1).rstrip("/") if _OLD_PORT_PATTERN.search(p) else p
-    # Relative path
-    return f"{settings.BASE_URL}/uploads/{p}"
-
-def _make_photo_urls(photos: list) -> list:
-    """Chuyển relative path / old URL thành full URL qua gateway."""
-    result = []
-    for p in (photos or []):
-        if not p:
-            continue
-        if p.startswith("http"):
-            # Normalize nếu URL trỏ thẳng vào port service cũ
-            if _OLD_PORT_PATTERN.search(p):
-                # Giữ nguyên path, chỉ thay phần host:port
-                path = "/" + p.split("/", 3)[-1]  # /uploads/reviews/xxx.jpg
-                result.append(settings.BASE_URL + path)
-            else:
-                result.append(p)
-        else:
-            result.append(f"{settings.BASE_URL}/uploads/{p}")
-    return result
-
-# Schemas
-class ReviewCreate(BaseModel):
-    location_id: int
-    rating: float
-    comment: Optional[str] = None
-    photos: Optional[list] = []
-    visited_at: Optional[datetime] = None
-
-class ReviewUpdate(BaseModel):
-    rating: Optional[float] = None
-    comment: Optional[str] = None
-    photos: Optional[list] = None
-
-class UserInfo(BaseModel):
-    id: int
-    full_name: str
-    email: str
-
-class ReviewResponse(BaseModel):
-    id: int
-    user_id: int
-    location_id: int
-    rating: float
-    comment: Optional[str]
-    photos: Optional[list]
-    user: Optional[UserInfo]   # ← trả về user object cho frontend
-    visited_at: Optional[datetime]
-    created_at: datetime
-    class Config: from_attributes = True
-
-def _enrich_review(review: Review) -> dict:
-    """Thêm user object và chuyển photo paths thành full URL."""
-    return {
-        "id": review.id,
-        "user_id": review.user_id,
-        "location_id": review.location_id,
-        "rating": review.rating,
-        "comment": review.comment,
-        "photos": _make_photo_urls(review.photos or []),
-        "user": {
-            "id": review.user_id,
-            "full_name": review.user_name or "Người dùng",
-            "email": review.user_email or "",
-        },
-        "visited_at": review.visited_at,
-        "created_at": review.created_at,
-    }
-
+# Phần mở rộng ảnh checkin được phép tải lên
 ALLOWED_EXT = {"png", "jpg", "jpeg", "gif", "webp"}
 
+# Khởi tạo FastAPI
 app = FastAPI(title="TRAWiMe Review Service", version="2.0.0")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
+)
 
+# Gắn thư mục tĩnh để hiển thị ảnh checkin tải lên ở route uploads
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
 
 @app.get("/health")
-def health(): return {"status": "healthy", "service": "review-service"}
+def health():
+    return {"status": "healthy", "service": "review-service"}
 
 @app.post("/api/reviews", status_code=201)
 def create_review(
     review: ReviewCreate,
     current: CurrentUser = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db)
 ):
-    # Lấy tên user từ user-service (best-effort, không block nếu fail)
+    # API tạo đánh giá mới:
+    # 1. Kiểm tra họ tên thật của người dùng từ user-service bằng cuộc gọi HTTP ngắn
+    # 2. Caching thông tin họ tên và email trực tiếp vào bảng reviews để tránh truy vấn N+1
+    # 3. Thêm mới đánh giá và lưu vào database
     user_name = current.name or current.email
     try:
+        # Gọi HTTP liên dịch vụ lấy tên người dùng hiện tại
         with httpx.Client(timeout=3) as client:
             resp = client.get(
                 f"{settings.USER_SERVICE_URL}/api/users/profile",
@@ -182,7 +58,8 @@ def create_review(
             if resp.status_code == 200:
                 user_name = resp.json().get("full_name", user_name)
     except Exception:
-        pass  # Dùng email nếu không lấy được tên
+        # Giữ nguyên email nếu dịch vụ hồ sơ bận
+        pass
 
     new_review = Review(
         user_id=current.id,
@@ -198,19 +75,21 @@ def create_review(
 @app.post("/api/reviews/upload-photos")
 async def upload_photos(
     files: List[UploadFile] = File(...),
-    current: CurrentUser = Depends(get_current_user),
+    current: CurrentUser = Depends(get_current_user)
 ):
+    # API tải lên nhiều ảnh checkin đồng thời:
+    # Lưu trữ các hình ảnh vào thư mục uploads/reviews và trả về danh sách liên kết URL hoàn chỉnh
     paths = []
     for f in files:
         ext = f.filename.rsplit(".", 1)[-1].lower()
         if ext not in ALLOWED_EXT:
-            raise HTTPException(status_code=400, detail="File type not allowed")
+            raise HTTPException(status_code=400, detail="Định dạng tệp tin hình ảnh không được phép")
         dest = os.path.join(settings.UPLOAD_DIR, "reviews")
         os.makedirs(dest, exist_ok=True)
         fname = f"{uuid4()}.{ext}"
         with open(os.path.join(dest, fname), "wb") as buf:
             shutil.copyfileobj(f.file, buf)
-        paths.append(f"{settings.BASE_URL}/uploads/reviews/{fname}")  # ← full URL
+        paths.append(f"{settings.BASE_URL}/uploads/reviews/{fname}")
     return {"photos": paths}
 
 @app.get("/api/reviews/location/{location_id}")
@@ -218,8 +97,9 @@ def get_location_reviews(
     location_id: int,
     skip: int = 0,
     limit: int = 50,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db)
 ):
+    # Lấy danh sách toàn bộ đánh giá của một địa điểm du lịch sắp xếp theo thời gian mới nhất
     reviews = (
         db.query(Review)
         .filter(Review.location_id == location_id)
@@ -235,8 +115,9 @@ def get_my_checkins(
     skip: int = 0,
     limit: int = 20,
     current: CurrentUser = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db)
 ):
+    # Lấy danh sách lịch sử tất cả các điểm checkin/đánh giá của chính người dùng đang đăng nhập
     reviews = (
         db.query(Review)
         .filter(Review.user_id == current.id)
@@ -251,9 +132,9 @@ def get_my_checkins(
 def create_checkin(
     review: ReviewCreate,
     current: CurrentUser = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db)
 ):
-    """Alias của create_review (checkin = review)."""
+    # Bí danh của API tạo đánh giá: Checkin và Review sử dụng chung một luồng xử lý
     return create_review(review, current, db)
 
 @app.put("/api/reviews/{review_id}")
@@ -261,11 +142,12 @@ def update_review(
     review_id: int,
     data: ReviewUpdate,
     current: CurrentUser = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db)
 ):
+    # API sửa đổi đánh giá cũ: Chỉ cho phép chính chủ sở hữu chỉnh sửa
     review = db.query(Review).filter(Review.id == review_id, Review.user_id == current.id).first()
     if not review:
-        raise HTTPException(status_code=404, detail="Không tìm thấy đánh giá")
+        raise HTTPException(status_code=404, detail="Không tìm thấy đánh giá tương ứng hoặc bạn không có quyền sửa")
     for k, v in data.model_dump(exclude_unset=True).items():
         setattr(review, k, v)
     db.commit()
@@ -276,14 +158,16 @@ def update_review(
 def delete_review(
     review_id: int,
     current: CurrentUser = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db)
 ):
+    # API xóa bỏ đánh giá: Chỉ cho phép chính chủ sở hữu xóa
     review = db.query(Review).filter(Review.id == review_id, Review.user_id == current.id).first()
     if not review:
-        raise HTTPException(status_code=404, detail="Không tìm thấy đánh giá")
+        raise HTTPException(status_code=404, detail="Không tìm thấy đánh giá tương ứng hoặc bạn không có quyền xóa")
     db.delete(review)
     db.commit()
 
 if __name__ == "__main__":
     import uvicorn
+    # Khởi chạy dịch vụ review-service trên cổng 8004
     uvicorn.run("main:app", host="0.0.0.0", port=8004, reload=True)
