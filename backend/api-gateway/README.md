@@ -1,4 +1,4 @@
-# TRAWiMe - API Gateway Service
+# TRAWIME - API Gateway Service
 
 Dịch vụ API Gateway là cổng vào duy nhất xử lý và điều phối toàn bộ các yêu cầu từ ứng dụng di động tới các dịch vụ microservices hạ nguồn.
 

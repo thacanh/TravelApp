@@ -1,5 +1,5 @@
 """
-migrate_db_nn.py — TRAWiMe one-time migration script
+migrate_db_nn.py — TRAWIME one-time migration script
 Chuyển dữ liệu từ locations.category (string) → location_categories (N-N junction table).
 
 Chạy DUY NHẤT 1 LẦN trước khi deploy backend mới:
@@ -24,7 +24,7 @@ DRY_RUN = False  # Set True để preview mà không thực sự thay đổi DB
 
 def run():
     print("=" * 55)
-    print("  TRAWiMe — Category N-N Migration")
+    print("  TRAWIME — Category N-N Migration")
     print(f"  Host: {DB_HOST}:{DB_PORT}  DB: {DB_NAME}")
     print(f"  {'[DRY RUN - Không thay đổi DB]' if DRY_RUN else '[LIVE - Thay đổi DB thật]'}")
     print("=" * 55)

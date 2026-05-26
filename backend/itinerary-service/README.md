@@ -1,4 +1,4 @@
-# TRAWiMe - Itinerary Service
+# TRAWIME - Itinerary Service
 
 Dịch vụ Lịch trình (Itinerary Service) quản lý kế hoạch di chuyển cá nhân của du khách, chia nhỏ lịch trình theo từng ngày, các hoạt động cụ thể và cung cấp thuật toán tối ưu hóa lộ trình di chuyển.
 

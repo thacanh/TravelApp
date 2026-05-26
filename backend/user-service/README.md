@@ -1,4 +1,4 @@
-# TRAWiMe - User Service
+# TRAWIME - User Service
 
 Dịch vụ Người dùng (User Service) chịu trách nhiệm quản lý hồ sơ thông tin cá nhân người dùng, tải lên ảnh đại diện, thay đổi mật khẩu và quản lý danh mục địa điểm yêu thích.
 

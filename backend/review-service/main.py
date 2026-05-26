@@ -16,7 +16,7 @@ from schemas import ReviewCreate, ReviewUpdate
 ALLOWED_EXT = {"png", "jpg", "jpeg", "gif", "webp"}
 
 # Khởi tạo FastAPI
-app = FastAPI(title="TRAWiMe Review Service", version="2.0.0")
+app = FastAPI(title="TRAWIME Review Service", version="2.0.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

@@ -42,7 +42,7 @@ ALLOWED_MEDIA_TYPES = ALLOWED_IMAGE_TYPES | ALLOWED_VIDEO_TYPES
 MAX_IMAGE_SIZE = 10 * 1024 * 1024   # 10 MB
 MAX_VIDEO_SIZE = 100 * 1024 * 1024  # 100 MB
 
-app = FastAPI(title="TRAWiMe Location Service", version="2.0.0")
+app = FastAPI(title="TRAWIME Location Service", version="2.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 # Gắn kết thư mục chứa ảnh/video để phục vụ truy cập trực tiếp từ liên kết

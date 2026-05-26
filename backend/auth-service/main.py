@@ -12,7 +12,7 @@ from models import get_db, User
 from helpers import get_password_hash, verify_password, create_access_token, get_current_user, settings
 from schemas import UserCreate, UserResponse, Token
 
-app = FastAPI(title="TRAWiMe Auth Service", version="2.0.0")
+app = FastAPI(title="TRAWIME Auth Service", version="2.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 @app.get("/health")

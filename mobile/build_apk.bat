@@ -1,6 +1,6 @@
 @echo off
 echo ================================
-echo   Building TRAWiMe APK
+echo   Building TRAWIME APK
 echo ================================
 echo.
 

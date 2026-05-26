@@ -1,5 +1,5 @@
 -- ============================================================
--- TRAWiMe — Full Database Initialization Script
+-- TRAWIME — Full Database Initialization Script
 -- Chạy 1 lần để tạo toàn bộ bảng + seed data mặc định.
 -- Database: trawime_db (MySQL 5.7+ / MariaDB 10.3+)
 -- ============================================================

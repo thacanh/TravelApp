@@ -1,4 +1,4 @@
-# TRAWiMe - Location Service
+# TRAWIME - Location Service
 
 Dịch vụ Địa điểm (Location Service) chịu trách nhiệm quản lý thông tin các địa danh du lịch, danh mục địa điểm, hình ảnh media đính kèm và cung cấp thuật toán tìm kiếm địa điểm xung quanh dựa trên tọa độ GPS.
 

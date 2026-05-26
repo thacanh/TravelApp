@@ -1,6 +1,6 @@
-# TRAWiMe Mobile App
+# TRAWIME Mobile App
 
-Flutter mobile application for TRAWiMe travel platform.
+Flutter mobile application for TRAWIME travel platform.
 
 ## Features
 

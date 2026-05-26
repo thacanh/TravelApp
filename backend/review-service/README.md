@@ -1,4 +1,4 @@
-# TRAWiMe - Review Service
+# TRAWIME - Review Service
 
 Dịch vụ Nhận xét (Review Service) quản lý các hoạt động check-in, chụp ảnh thực tế và viết nhận xét đánh giá của người dùng tại các địa điểm du lịch.
 

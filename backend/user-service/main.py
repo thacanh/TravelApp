@@ -12,7 +12,7 @@ from models import get_db, User, Favorite, settings
 from helpers import CurrentUser, get_current_user, _save_file, pwd_context
 from schemas import UserResponse, UserUpdate, ChangePasswordRequest
 
-app = FastAPI(title="TRAWiMe User Service", version="2.0.0")
+app = FastAPI(title="TRAWIME User Service", version="2.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 # Gắn kết thư mục chứa tệp tải lên làm thư mục tĩnh

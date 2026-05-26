@@ -25,7 +25,7 @@ from schemas import (
 )
 
 # Cấu Hình Ứng Dụng FastAPI
-app = FastAPI(title="TRAWiMe Itinerary Service", version="2.0.0")
+app = FastAPI(title="TRAWIME Itinerary Service", version="2.0.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

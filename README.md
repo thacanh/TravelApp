@@ -1,6 +1,6 @@
-# TRAWiMe - Ứng dụng Quản lý Lịch trình Du lịch Việt Nam
+# TRAWIME - Ứng dụng Quản lý Lịch trình Du lịch Việt Nam
 
-TRAWiMe là hệ thống hỗ trợ và quản lý lịch trình du lịch Việt Nam, tích hợp trợ lý ảo chatbot và gợi ý địa điểm thông minh bằng trí tuệ nhân tạo (AI) thông qua tìm kiếm vector (Vector Search) và độ tương đồng Cosine. Dự án bao gồm hệ thống backend xây dựng theo kiến trúc microservices sử dụng FastAPI và ứng dụng di động phía người dùng xây dựng bằng Flutter.
+TRAWIME là hệ thống hỗ trợ và quản lý lịch trình du lịch Việt Nam, tích hợp trợ lý ảo chatbot và gợi ý địa điểm thông minh bằng trí tuệ nhân tạo (AI) thông qua tìm kiếm vector (Vector Search) và độ tương đồng Cosine. Dự án bao gồm hệ thống backend xây dựng theo kiến trúc microservices sử dụng FastAPI và ứng dụng di động phía người dùng xây dựng bằng Flutter.
 
 ## Hướng dẫn cài đặt và khởi chạy hệ thống
 

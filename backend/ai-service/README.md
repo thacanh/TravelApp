@@ -1,4 +1,4 @@
-# TRAWiMe - AI Service
+# TRAWIME - AI Service
 
 Dịch vụ Trí tuệ Nhân tạo (AI Service) chịu trách nhiệm tích hợp mô hình ngôn ngữ Google Gemini API để hỗ trợ chatbot hội thoại thông minh và thực hiện gợi ý địa điểm du lịch bằng tìm kiếm ngữ nghĩa (Semantic Search).
 

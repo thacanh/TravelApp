@@ -1,4 +1,4 @@
-# TRAWiMe - Auth Service
+# TRAWIME - Auth Service
 
 Dịch vụ Xác thực (Auth Service) chịu trách nhiệm quản lý đăng ký tài khoản mới, xác thực đăng nhập và cấp phát mã bảo mật JWT (JSON Web Token).
 

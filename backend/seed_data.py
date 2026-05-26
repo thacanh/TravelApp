@@ -1,5 +1,5 @@
 """
-seed_data.py — TRAWiMe demo data seeder
+seed_data.py — TRAWIME demo data seeder
 
 Cách dùng:
     python seed_data.py
@@ -413,7 +413,7 @@ def step_embeddings(admin_token):
 
 def main():
     print("=" * 55)
-    print("  TRAWiMe — Seed Data Script")
+    print("  TRAWIME — Seed Data Script")
     print(f"  Server: {BASE_URL}")
     print("=" * 55)
 

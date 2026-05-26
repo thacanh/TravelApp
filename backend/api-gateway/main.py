@@ -1,5 +1,5 @@
 """
-API Gateway — Cổng vào duy nhất kết nối với các microservices của TRAWiMe.
+API Gateway — Cổng vào duy nhất kết nối với các microservices của TRAWIME.
 - Xác thực chữ ký số JWT và tiêm các thông tin tài khoản (Id, Role, Email, Name) vào HTTP headers.
 - Reverse-proxy (chuyển tiếp luồng) yêu cầu khách hàng đến đúng microservice đầu cuối.
 - Dọn dẹp hop-by-hop headers để tránh lỗi ngắt kết nối.
@@ -18,7 +18,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("api-gateway")
 
 app = FastAPI(
-    title="TRAWiMe API Gateway",
+    title="TRAWIME API Gateway",
     description="Cổng điều phối duy nhất chuyển tiếp các request tới các dịch vụ microservices",
     version="2.0.0",
 )
@@ -98,7 +98,7 @@ async def proxy(full_path: str, request: Request):
 
     # Root hoặc health check xử lý trực tiếp tại API Gateway
     if path in ("/", "/health"):
-        return JSONResponse({"message": "TRAWiMe API Gateway", "version": "2.0.0", "status": "ok"})
+        return JSONResponse({"message": "TRAWIME API Gateway", "version": "2.0.0", "status": "ok"})
 
     # Tìm kiếm service đích để chuyển hướng
     service_url = _get_service_url(path)
